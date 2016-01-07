@@ -275,6 +275,13 @@ function printUsages (chat_id, other_args) {
           --lineCap=\`String\`: set the line cap
           --lineJoin=\`String\`: set the line join
           --fontSize=\`Int\`: set the font size. If not set, it will be decided base on the input
+        ----------------
+        about the \`-o\` options
+        
+        the Id in \`-o\` is get from the group URL
+        i.e. if your group url is https://web.telegram.org/#/im?p=g\`12345678\`
+        Then your group id is \`-12345678\` (notice the negative markup in front of number)
+        The bot must be inside the group which you would like send the sticker to, otherwise this option won't work
     `;
     request.post(
         {
