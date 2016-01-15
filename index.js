@@ -89,6 +89,19 @@ function extractFlags (text) {
     }
 }
 
+
+function getRainbowColor(ctx, offX1, offY1, offX2, offY2) {
+    var gradient=ctx.createLinearGradient(offX1,offY1,offX2,offY2);
+    gradient.addColorStop(0.00, 'red'); 
+    gradient.addColorStop(1/6, 'orange'); 
+    gradient.addColorStop(2/6, 'yellow'); 
+    gradient.addColorStop(3/6, 'green') 
+    gradient.addColorStop(4/6, 'aqua'); 
+    gradient.addColorStop(5/6, 'blue'); 
+    gradient.addColorStop(1.00, 'purple');
+    return gradient;
+}
+
 api.on('inline_query', function (query) {
     console.log(query);
     
@@ -210,16 +223,16 @@ api.on('message', function(message)
         
         var fillColor = flags.fillColor || 'black';
         var strokeColor = flags.strokeColor ||'white';
-        var strokeWidth = flags.strokeWidth || 10;
         
         var canvas = new Canvas(WIDTH, HEIGHT)
           , ctx = canvas.getContext('2d');
         
         var fontSize = WIDTH / 2;
         var font = flags.font || 'Noto';
+        
         ctx.fillStyle = fillColor;
+        
         ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = strokeWidth;
         ctx.lineCap = flags.lineCap || 'round';
         ctx.lineJoin = flags.lineJoin || "round";
         
@@ -236,7 +249,8 @@ api.on('message', function(message)
                     var currentLength = ctx.measureText(text).width;
                     if (currentLength > longest) longest = currentLength;
                 })
-                if (longest > WIDTH) {
+                // reserve some width for the shadow to expand
+                if (longest > WIDTH * 0.95) {
                     fontSize *= 0.9;
                     fontSize = Math.floor(fontSize);
                     ctx.font = fontSize + 'px ' + font;
@@ -253,22 +267,46 @@ api.on('message', function(message)
         }
         ctx.font = fontSize + 'px ' + font;
         
+        /* decide base on font size or user input */
+        var strokeWidth = flags.strokeWidth != null ? flags.strokeWidth : fontSize / 20;
+        var shadowBlur = flags.shadowBlur != null ? flags.shadowBlur : fontSize / 10;
+        ctx.lineWidth = strokeWidth;
+        
         console.log('font is ' + ctx.font);
         
         ctx.textAlign="center"; 
         ctx.textBaseline = 'middle';
         
+        
         var textCount = texts.length;
         texts.forEach(function (text, index) {
             if (strokeColor) {
-                            
-            ctx.shadowBlur = flags.shadowBlur || 20;
-            ctx.shadowColor = flags.shadowColor || "rgba(0, 0, 0, 0.7)";
-                ctx.strokeText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5));
-            ctx.shadowBlur = 0;
-            ctx.shadowColor = "";
+                ctx.shadowBlur = shadowBlur;
+                ctx.shadowColor = flags.shadowColor || "rgba(0, 0, 0, 0.7)";
+                
+                if (font.match(/noto/i)) {
+                    ctx.strokeText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5) - fontSize * 0.2);
+                } else {
+                    ctx.strokeText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5));
+                }
+                ctx.shadowBlur = 0;
+                ctx.shadowColor = "";
             }
-            ctx.fillText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5));
+            if (fillColor === "rainbow") {
+                ctx.fillStyle = getRainbowColor(
+                    ctx, 
+                    0, 
+                    HEIGHT / textCount * (index + 0.5) - fontSize / 2 * 0.8, 
+                    0, 
+                    HEIGHT / textCount * (index + 0.5) + fontSize / 2 * 0.8
+                );
+            }
+            // offset fontSize with 0.2 due of bug of noto font
+            if (font.match(/noto/i)) {
+                ctx.fillText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5) - fontSize * 0.2);
+            } else {
+                ctx.fillText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5));
+            }
         })
         
         
@@ -375,12 +413,12 @@ function printUsages (chat_id, other_args) {
           --font=\`String\`: set the image font
           --strokeWidth=\`Int\`: set the stroke width
           --strokeColor=\`String\`: set the stroke color
-          --fillColor=\`String\`: set the fill color
+          --fillColor=\`String\`: set the fill color, \`rainbow\` is a special color to use.
           --lineCap=\`String\`: set the line cap
           --lineJoin=\`String\`: set the line join
           --fontSize=\`Int\`: set the font size. If not set, it will be decided base on the input
-          --shadowBlur=\`Int\`: set the shadow blur (Default \`20\`)
-          --shadowColor=\`String\`: set the shadow color (Default \`rgba(0,0,0,0.5)\`)
+          --shadowBlur=\`Int\`: set the shadow blur
+          --shadowColor=\`String\`: set the shadow color
         ----------------
         about the \`-o\` options
         
