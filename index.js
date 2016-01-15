@@ -285,7 +285,7 @@ api.on('message', function(message)
                 ctx.shadowColor = flags.shadowColor || "rgba(0, 0, 0, 0.7)";
                 
                 if (font.match(/noto/i)) {
-                    ctx.strokeText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5) - fontSize * 0.14);
+                    ctx.strokeText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5) - fontSize * 0.10);
                 } else {
                     ctx.strokeText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5));
                 }
@@ -303,7 +303,7 @@ api.on('message', function(message)
             }
             // offset fontSize with 0.2 due of bug of noto font
             if (font.match(/noto/i)) {
-                ctx.fillText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5) - fontSize * 0.14);
+                ctx.fillText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5) - fontSize * 0.10);
             } else {
                 ctx.fillText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5));
             }
