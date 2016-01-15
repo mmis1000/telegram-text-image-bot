@@ -1,22 +1,29 @@
-var telegram = require('telegram-bot-api');
+// var telegram = require('telegram-bot-api');
 var Canvas = require('canvas')
 var request = require('request');
 
 var gtoken = require('./config').token;
-
+/*
 var api = new telegram({
     token: gtoken,
     updates: {
 		enabled: true
 	}
 });
+*/
+var TGAPI = require('./tg_api')
+var api = new TGAPI(gtoken)
 
 var selfData = null;
+
+api.on('error', console.error.bind(console));
+
 api.getMe(function(err, data)
 {
-    console.log(err);
+    console.error(err);
     console.log(data);
     selfData = data;
+    api.startPolling(40);
 });
 
 function toUnsignedInt(input) {
@@ -82,11 +89,102 @@ function extractFlags (text) {
     }
 }
 
+api.on('inline_query', function (query) {
+    console.log(query);
+    
+    var WIDTH = 20;
+    var HEIGHT = 20;
+    
+    var text = query.query;
+    
+    var output = [];
+    
+    var i, j, k, canvas, ctx;
+    
+    function hex (num) {
+        return ('00' + Math.floor(num).toString(16)).slice(-2);
+    }
+    
+    var results = [];
+    
+    text = text.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]|(?:.|\r|\n)/g);
+    if (text == null) return;
+    
+    for (i = 0; i < text.length; i++) {
+        canvas = new Canvas(WIDTH, HEIGHT);
+        ctx = canvas.getContext('2d');
+        ctx.font = WIDTH + 'px ' + 'noto';
+        ctx.textAlign="center"; 
+        // ctx.textBaseline = 'middle';
+        ctx.textBaseline = 'hanging';
+        ctx.antialias = 'none';
+        ctx.patternQuality = "fast";
+        
+        if (text[i].charCodeAt(0) > 127) {
+            ctx.fillText(text[i], WIDTH / 2, /*HEIGHT / 2*/ -HEIGHT / 4);
+        } else {
+            ctx.fillText(text[i], WIDTH / 2, /*HEIGHT / 2*/ 0);
+        }
+        
+        var imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
+        for (j = 0; j < HEIGHT; j++) {
+            results.push([]);
+            
+            for (k = 0; k < WIDTH; k++) {
+                var index = (j * WIDTH + k) * 4;
+                
+                var depth =  (1 - (imageData.data[index] + imageData.data[index + 1] + imageData.data[index + 2]) / 256 / 3)
+                    * (imageData.data[index + 3] / 256)
+                results[results.length - 1].push(depth > 0.5);
+            }
+        }
+        
+    }
+
+    var finalText = (results.reduce(function (previousValue, currentValue, currentIndex) {
+        if (currentIndex % 2 === 0) {
+            previousValue.push(
+                currentValue.map(function (val, index) {
+                    return [val, results[currentIndex + 1][index]];
+                })
+            )
+        }
+        return previousValue;
+    }, [])
+    .map(function (val) {
+        return val.map(function (val) {
+            // console.log(val, val[0] * 1 + val[1] * 2)
+            switch (val[0] * 1 + val[1] * 2) {
+                case 0: return " ";
+                case 1: return "'";
+                case 2: return ".";
+                case 3: return ":";
+            }
+        }).join('').replace(/\s+$/, '');
+    })
+    .join('\n'));
+    
+    console.log(finalText);
+    
+    api.answerInlineQuery(query.id, [{
+        type: 'article',
+        id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
+        title: 'Ascii Art',
+        message_text: '```\n' + finalText.replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
+        parse_mode: 'Markdown'
+    }], function (err, res) {
+        if (err) return console.error(res);
+        console.log(res);
+    })
+})
+api.on('chosen_inline_result', function (result) {
+    console.log(result);
+})
+
 api.on('message', function(message)
 {
     console.log(message);
     
-    if (!selfData) return;
     if (message.text && message.text.match(new RegExp('^\/maketext(@' + selfData.username +')?(\\s|$)', 'i'))) {
         var text = message.text.replace(new RegExp('^\/maketext(@' + selfData.username +')?\\s*', 'i'), '');
         
@@ -103,6 +201,7 @@ api.on('message', function(message)
         flags.width = toUnsignedInt(flags.width)
         flags.height = toUnsignedInt(flags.height)
         flags.strokeWidth = toUnsignedInt(flags.strokeWidth)
+        flags.shadowBlur = toUnsignedInt(flags.shadowBlur)
         
         var WIDTH = flags.width || 512;
         var HEIGHT = flags.height || 512;
@@ -162,7 +261,12 @@ api.on('message', function(message)
         var textCount = texts.length;
         texts.forEach(function (text, index) {
             if (strokeColor) {
+                            
+            ctx.shadowBlur = flags.shadowBlur || 20;
+            ctx.shadowColor = flags.shadowColor || "rgba(0, 0, 0, 0.7)";
                 ctx.strokeText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5));
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = "";
             }
             ctx.fillText(text, WIDTH / 2, HEIGHT / textCount * (index + 0.5));
         })
@@ -275,6 +379,8 @@ function printUsages (chat_id, other_args) {
           --lineCap=\`String\`: set the line cap
           --lineJoin=\`String\`: set the line join
           --fontSize=\`Int\`: set the font size. If not set, it will be decided base on the input
+          --shadowBlur=\`Int\`: set the shadow blur (Default \`20\`)
+          --shadowColor=\`String\`: set the shadow color (Default \`rgba(0,0,0,0.5)\`)
         ----------------
         about the \`-o\` options
         
