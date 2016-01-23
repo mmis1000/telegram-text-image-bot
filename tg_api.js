@@ -9,16 +9,40 @@ function TelegramAPI (token) {
     this.token = token;
     
     this.lastOffset = null;
+    
+    this.pollingTimeout = null;
+    this.pollingTimeoutId = null;
+    
+    this.currentPollRequest = null;
 }
 util.inherits(TelegramAPI, EventEmitter);
 
 TelegramAPI.prototype.startPolling = function (timeout) {
     timeout = timeout == null ? 40 : timeout;
+    
+    this.pollingTimeout = timeout * 1000 + 20000;
+    
     var self = this;
     
     if (this.pollingEnabled) return false;
     this.pollingEnabled = true;
-    this._poll(timeout, null, function handle(err, response, body) {
+    
+    function checkTimeout () {
+        if (self.pollingEnabled) {
+            console.error('request failed to response, restart polling...')
+            try {
+                self.currentPollRequest.abort();
+                // restart polling...
+            } catch (err) {
+                console.error(err)
+            }
+            self.startPolling(timeout)
+        }
+    }
+    
+    clearTimeout(this.pollingTimeoutId);
+    this.pollingTimeoutId = setTimeout(checkTimeout, this.pollingTimeout);
+    this.currentPollRequest = this._poll(timeout, null, function handle(err, response, body) {
         var i;
         if (err || response.statusCode !== 200) {
             self.emit('error', err || new Error('unexpect response code: ' + response.statusCode));
@@ -48,7 +72,9 @@ TelegramAPI.prototype.startPolling = function (timeout) {
         
         if (self.pollingEnabled) {
             // console.log('current offset: ' + self.lastOffset)
-            self._poll(timeout, self.lastOffset + 1, handle);
+            clearTimeout(self.pollingTimeoutId);
+            self.pollingTimeoutId = setTimeout(checkTimeout, self.pollingTimeout);
+            self.currentPollRequest = self._poll(timeout, self.lastOffset + 1, handle);
         }
     })
 }
@@ -60,7 +86,7 @@ TelegramAPI.prototype._poll = function _poll (timeout, offset, cb) {
     if (offset != null) {
         param.offset = offset
     }
-    request.get({url:'https://api.telegram.org/bot' + this.token + '/getUpdates', qs:param}, cb)
+    return request.get({url:'https://api.telegram.org/bot' + this.token + '/getUpdates', qs:param}, cb)
 }
 
 TelegramAPI.prototype._invoke = function _invoke(apiName, params, cb, multiPart) {
