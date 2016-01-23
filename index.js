@@ -20,7 +20,7 @@ api.on('error', console.error.bind(console));
 
 api.getMe(function(err, data)
 {
-    console.error(err);
+    if (err) console.error(err);
     console.log(data);
     selfData = data;
     api.startPolling(40);
