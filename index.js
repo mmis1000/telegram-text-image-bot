@@ -1,4 +1,3 @@
-// var telegram = require('telegram-bot-api');
 var Canvas = require('canvas')
 var request = require('request');
 
@@ -45,11 +44,11 @@ function toUnsignedInt(input) {
 }
 
 function extractFlags (text) {
-    var temp = text.match(/^((?:--?[a-z]+(?:=[^\s]*)?\s+)*)((?:.|[\r\n])*)$/i)
+    var temp = text.match(/^((?:--?[a-z]+(?:=(?:"(?:[^"\\]|\\.)+"|[^\s]*))?\s+)*)((?:.|[\r\n])*)$/i)
     // console.log(temp);
     var newText = temp[2].replace(/^--\s/, '');
     var flags = {};
-    var temp2 = temp[1].match(/--?[a-z]+(?:=[^\s]*)?/ig)
+    var temp2 = temp[1].match(/--?[a-z]+(?:=(?:"(?:[^"\\]|\\.)+"|[^\s]*))?/ig)
     if (temp2) {
         temp2.forEach(function (flag) {
             var value = true;
@@ -59,7 +58,6 @@ function extractFlags (text) {
                 value = (/^--?[a-z]+=(.*)/i).exec(flag)[1];
                 if (value.match(/^".*"$/)) {
                     try {
-                      value = value.replace(/\\s/g, ' ');
                       value = JSON.parse(value) + '';
                     } catch (e) {
                         //ignore it
@@ -221,6 +219,8 @@ api.on('message', function(message)
         var PRESERVE_FONT_HEIGHT_RATIO = 1.2;
         var texts = text.split(/\r?\n/g);
         
+        var autoHeight = flags.autoHeight || flags.a;
+        
         var fillColor = flags.fillColor || 'black';
         var strokeColor = flags.strokeColor ||'white';
         
@@ -229,6 +229,10 @@ api.on('message', function(message)
         
         var fontSize = WIDTH / 2;
         var font = flags.font || "\"Noto Sans CJK Jp\"";
+        
+        if (font.match(/\s/) && !font.match(/^"/)) {
+            font = '"' + font + '"';
+        }
         
         ctx.fillStyle = fillColor;
         
@@ -242,6 +246,7 @@ api.on('message', function(message)
         var longest;
         
         var useUserFontSize = false;
+        
         if (!flags.fontSize || isNaN(parseInt(flags.fontSize, 10)) || parseInt(flags.fontSize, 10) <= 0) {
             while ( true ) {
                 longest = 0;
@@ -258,9 +263,16 @@ api.on('message', function(message)
                 }
                 break;
             }
-            if (fontSize * texts.length * PRESERVE_FONT_HEIGHT_RATIO> HEIGHT) {
+            if (fontSize * texts.length * PRESERVE_FONT_HEIGHT_RATIO > HEIGHT) {
                 fontSize = Math.floor(HEIGHT / texts.length / PRESERVE_FONT_HEIGHT_RATIO);
                 ctx.font = fontSize + 'px ' + font;
+            }
+            if (autoHeight) {
+                if (fontSize * texts.length * PRESERVE_FONT_HEIGHT_RATIO < HEIGHT) {
+                    HEIGHT = fontSize * texts.length * PRESERVE_FONT_HEIGHT_RATIO;
+                    canvas.height = HEIGHT;
+                    console.log('changing canvas size to ' + HEIGHT + ' to match the line height fo text')
+                }
             }
         } else {
             fontSize = parseInt(flags.fontSize, 10)
@@ -332,6 +344,23 @@ api.on('message', function(message)
             sendSticker (file, 'test.png', 'image/png', targetId, additionOptions)
         }
     }
+    
+    if (message.text && message.text.match(new RegExp('^\/id(@' + selfData.username + ')?', 'i'))) {
+        request.post(
+        {
+            url:'https://api.telegram.org/bot' + gtoken + '/sendMessage', 
+            formData: {
+                reply_to_message_id: message.message_id,
+                chat_id: message.chat.id,
+                text: "" + message.chat.id
+            }
+        }
+        , 
+        function (err, response, body) {
+            if (err) return console.error(err);
+            console.log(body);
+        });
+    }
 });
 
 function sendDocument (document, fileName, MIME, chat_id, other_args) {
@@ -402,30 +431,36 @@ function printUsages (chat_id, other_args) {
     other_args.chat_id = chat_id;
     other_args.parse_mode = 'Markdown';
     other_args.text = `
-        generate a text sticker
-        usage: {command} \\[flags] \\[--] <text>
-        flags:
-          -d: don't send as sticker, send as a document instead
-          -p: don't send as sticker, send as a photo instead
-          -o=\`Int\`: send it to another group or user instead
-          --width=\`Int\`: set the image width
-          --height=\`Int\`: set the image height
-          --font=\`String\`: set the image font
-          --strokeWidth=\`Int\`: set the stroke width
-          --strokeColor=\`String\`: set the stroke color
-          --fillColor=\`String\`: set the fill color, \`rainbow\` is a special color to use.
-          --lineCap=\`String\`: set the line cap
-          --lineJoin=\`String\`: set the line join
-          --fontSize=\`Int\`: set the font size. If not set, it will be decided base on the input
-          --shadowBlur=\`Int\`: set the shadow blur
-          --shadowColor=\`String\`: set the shadow color
-        ----------------
-        about the \`-o\` options
-        
-        the Id in \`-o\` is get from the group URL
-        i.e. if your group url is https://web.telegram.org/#/im?p=g\`12345678\`
-        Then your group id is \`-12345678\` (notice the negative markup in front of number)
-        The bot must be inside the group which you would like send the sticker to, otherwise this option won't work
+generate a text sticker
+usage: {command} \\[flags] \\[--] <text>
+flags:
+  -d: don't send as sticker, send as a document instead
+  -p: don't send as sticker, send as a photo instead
+  -a, --autoHeight: adjust height automatically to match the line height of text
+  -o=\`Int\`: send it to another group or user instead
+  --width=\`Int\`: set the image width
+  --height=\`Int\`: set the image height
+  --font=\`String\`: set the image font
+  --strokeWidth=\`Int\`: set the stroke width
+  --strokeColor=\`String\`: set the stroke color
+  --fillColor=\`String\`: set the fill color, \`rainbow\` is a special color to use.
+  --lineCap=\`String\`: set the line cap
+  --lineJoin=\`String\`: set the line join
+  --fontSize=\`Int\`: set the font size. If not set, it will be decided base on the input
+  --shadowBlur=\`Int\`: set the shadow blur
+  --shadowColor=\`String\`: set the shadow color
+----------------
+About the \`-o\` options
+
+The bot must be inside the group which you would like send the sticker to, otherwise this option won't work
+you could get this id by the /id command
+
+About \`String\`
+
+\`String\` could be anything except space or a JSON string
+ex: 
+/maketext@${selfData.username.replace(/_/g, '\\_')} --font="Noto Sans CJK JP" test
+/maketext@${selfData.username.replace(/_/g, '\\_')} --font=monospace test
     `;
     request.post(
         {
