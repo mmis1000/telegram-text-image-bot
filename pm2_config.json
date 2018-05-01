@@ -1,0 +1,9 @@
+{
+  "apps" : [{
+    "name" : "text_image_bot",
+    "script" : "./index.js",
+    "watch" : ["js", "coffee"],
+    "ignore_watch" : ["node_modules"],
+    "exec_mode" : "fork"
+  }]
+}

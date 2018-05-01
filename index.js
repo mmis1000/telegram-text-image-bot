@@ -1,3 +1,5 @@
+var brailleMap = "⠀⠁⠂⠃⠄⠅⠆⠇⡀⡁⡂⡃⡄⡅⡆⡇⠈⠉⠊⠋⠌⠍⠎⠏⡈⡉⡊⡋⡌⡍⡎⡏⠐⠑⠒⠓⠔⠕⠖⠗⡐⡑⡒⡓⡔⡕⡖⡗⠘⠙⠚⠛⠜⠝⠞⠟⡘⡙⡚⡛⡜⡝⡞⡟⠠⠡⠢⠣⠤⠥⠦⠧⡠⡡⡢⡣⡤⡥⡦⡧⠨⠩⠪⠫⠬⠭⠮⠯⡨⡩⡪⡫⡬⡭⡮⡯⠰⠱⠲⠳⠴⠵⠶⠷⡰⡱⡲⡳⡴⡵⡶⡷⠸⠹⠺⠻⠼⠽⠾⠿⡸⡹⡺⡻⡼⡽⡾⡿⢀⢁⢂⢃⢄⢅⢆⢇⣀⣁⣂⣃⣄⣅⣆⣇⢈⢉⢊⢋⢌⢍⢎⢏⣈⣉⣊⣋⣌⣍⣎⣏⢐⢑⢒⢓⢔⢕⢖⢗⣐⣑⣒⣓⣔⣕⣖⣗⢘⢙⢚⢛⢜⢝⢞⢟⣘⣙⣚⣛⣜⣝⣞⣟⢠⢡⢢⢣⢤⢥⢦⢧⣠⣡⣢⣣⣤⣥⣦⣧⢨⢩⢪⢫⢬⢭⢮⢯⣨⣩⣪⣫⣬⣭⣮⣯⢰⢱⢲⢳⢴⢵⢶⢷⣰⣱⣲⣳⣴⣵⣶⣷⢸⢹⢺⢻⢼⢽⢾⢿⣸⣹⣺⣻⣼⣽⣾⣿".split('');
+
 var Canvas = require('canvas')
 var request = require('request');
 
@@ -100,21 +102,10 @@ function getRainbowColor(ctx, offX1, offY1, offX2, offY2) {
     return gradient;
 }
 
-api.on('inline_query', function (query) {
-    console.log(query);
-    
+function getSimple(text) {
     var WIDTH = 20;
     var HEIGHT = 20;
-    
-    var text = query.query;
-    
-    var output = [];
-    
     var i, j, k, canvas, ctx;
-    
-    function hex (num) {
-        return ('00' + Math.floor(num).toString(16)).slice(-2);
-    }
     
     var results = [];
     
@@ -124,18 +115,18 @@ api.on('inline_query', function (query) {
     for (i = 0; i < text.length; i++) {
         canvas = new Canvas(WIDTH, HEIGHT);
         ctx = canvas.getContext('2d');
-        ctx.font = WIDTH + 'px ' + 'noto';
+        ctx.font = WIDTH + 'px "Source Han Sans"';
         ctx.textAlign="center"; 
         // ctx.textBaseline = 'middle';
         ctx.textBaseline = 'hanging';
         ctx.antialias = 'none';
         ctx.patternQuality = "fast";
         
-        if (text[i].charCodeAt(0) > 127) {
-            ctx.fillText(text[i], WIDTH / 2, /*HEIGHT / 2*/ -HEIGHT / 4);
-        } else {
+        // if (text[i].charCodeAt(0) > 127) {
+            // ctx.fillText(text[i], WIDTH / 2, /*HEIGHT / 2*/ -HEIGHT / 4);
+        // } else {
             ctx.fillText(text[i], WIDTH / 2, /*HEIGHT / 2*/ 0);
-        }
+        // }
         
         var imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
         for (j = 0; j < HEIGHT; j++) {
@@ -176,12 +167,99 @@ api.on('inline_query', function (query) {
     .join('\n'));
     
     console.log(finalText);
+    return finalText;
+}
+
+
+function getBraille(text) {
+    var WIDTH = 40;
+    var HEIGHT = 40;
+    var i, j, k, canvas, ctx;
+    
+    /**
+     * @type {boolean[][]}
+     */
+    var results = [];
+    
+    text = text.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]|(?:.|\r|\n)/g);
+    if (text == null) return;
+    
+    for (i = 0; i < text.length; i++) {
+        canvas = new Canvas(WIDTH, HEIGHT);
+        ctx = canvas.getContext('2d');
+        ctx.font = WIDTH + 'px "Source Han Sans"';
+        ctx.textAlign="center"; 
+        // ctx.textBaseline = 'middle';
+        ctx.textBaseline = 'hanging';
+        ctx.antialias = 'none';
+        ctx.patternQuality = "fast";
+        
+        ctx.fillText(text[i], WIDTH / 2, 0);
+        
+        var imageData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
+        for (j = 0; j < HEIGHT; j++) {
+            results.push([]);
+            
+            for (k = 0; k < WIDTH; k++) {
+                var index = (j * WIDTH + k) * 4;
+                
+                var depth =  (1 - (imageData.data[index] + imageData.data[index + 1] + imageData.data[index + 2]) / 256 / 3)
+                    * (imageData.data[index + 3] / 256)
+                results[results.length - 1].push(depth > 0.5);
+            }
+        }
+        
+    }
+
+    var finalText = "";
+    
+    for (let i = 0; i < results.length; i += 4) {
+        for (let j = 0; j < results[i].length; j += 2) {
+            var value = 0;
+            value += results[i + 0][j + 0] << 0;
+            value += results[i + 1][j + 0] << 1;
+            value += results[i + 2][j + 0] << 2;
+            value += results[i + 3][j + 0] << 3;
+            value += results[i + 0][j + 1] << 4;
+            value += results[i + 1][j + 1] << 5;
+            value += results[i + 2][j + 1] << 6;
+            value += results[i + 3][j + 1] << 7;
+            
+            finalText += brailleMap[value];
+        }
+        finalText += '\n';
+    }
+    
+    console.log(finalText);
+    return finalText;
+}
+
+api.on('inline_query', function (query) {
+    console.log(query);
+    
+    var text = query.query;
+    
+    var filtered = text.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]|(?:.|\r|\n)/g);
+    if (filtered == null) return;
+    
     
     api.answerInlineQuery(query.id, [{
         type: 'article',
         id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
-        title: 'Ascii Art',
-        message_text: '```\n' + finalText.replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
+        title: 'Ascii Art (ascii only)',
+        message_text: '```\n' + getSimple(text).replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
+        parse_mode: 'Markdown'
+    }, {
+        type: 'article',
+        id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
+        title: 'Ascii Art (unicode)',
+        message_text: '```\n' + getBraille(text).replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
+        parse_mode: 'Markdown'
+    }, {
+        type: 'article',
+        id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
+        title: 'Ascii Art (unicode) with align fix for windows',
+        message_text: '```\n' + getBraille(text).replace(/\u2800/g, '⠁').replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
         parse_mode: 'Markdown'
     }], function (err, res) {
         if (err) return console.error(res);
@@ -195,6 +273,9 @@ api.on('chosen_inline_result', function (result) {
 api.on('message', function(message)
 {
     console.log(message);
+    
+    // emergency patch
+    // if (message.from && message.from.id === 109780439) return;
     
     if (message.text && message.text.match(new RegExp('^\/maketext(@' + selfData.username +')?(\\s|$)', 'i'))) {
         var text = message.text.replace(new RegExp('^\/maketext(@' + selfData.username +')?\\s*', 'i'), '');
@@ -228,7 +309,7 @@ api.on('message', function(message)
           , ctx = canvas.getContext('2d');
         
         var fontSize = WIDTH / 2;
-        var font = flags.font || "\"Noto Sans CJK Jp\"";
+        var font = flags.font || "\"Source Han Sans\"";
         
         if (font.match(/\s/) && !font.match(/^"/)) {
             font = '"' + font + '"';
@@ -304,13 +385,22 @@ api.on('message', function(message)
                 ctx.shadowBlur = 0;
                 ctx.shadowColor = "";
             }
-            if (fillColor === "rainbow") {
+            if (fillColor === "rainbow" || fillColor === "r") {
                 ctx.fillStyle = getRainbowColor(
                     ctx, 
                     0, 
                     HEIGHT / textCount * (index + 0.5) - fontSize / 2 * 0.8, 
                     0, 
                     HEIGHT / textCount * (index + 0.5) + fontSize / 2 * 0.8
+                );
+            }
+            if (fillColor === "vertical-rainbow" || fillColor === "vr") {
+                ctx.fillStyle = getRainbowColor(
+                    ctx, 
+                    0, 
+                    0, 
+                    WIDTH, 
+                    0
                 );
             }
             // offset fontSize with 0.2 due of bug of noto font
@@ -345,7 +435,7 @@ api.on('message', function(message)
         }
     }
     
-    if (message.text && message.text.match(new RegExp('^\/id(@' + selfData.username + ')?', 'i'))) {
+    if (message.text && message.text.match(new RegExp('^\/id(@' + selfData.username + ')?$', 'i'))) {
         request.post(
         {
             url:'https://api.telegram.org/bot' + gtoken + '/sendMessage', 
