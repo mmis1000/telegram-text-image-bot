@@ -132,16 +132,3 @@ TelegramAPI.prototype.answerInlineQuery = function answerInlineQuery(id, results
 }
 
 module.exports = TelegramAPI
-
-function test () {
-    var api = new TelegramAPI('161828826:AAHSQvcIWQxYu1xeqh2owZWOOOEkZWt8nFs');
-    api.on('error', console.error.bind(console));
-    api.on('message', console.log.bind(console));
-    api.getMe(function (err, res) {
-        console.log(err);
-        console.log(res);
-        api.startPolling(40);
-    })
-    api.startPolling(40);
-}
-// test();
