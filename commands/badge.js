@@ -25,7 +25,13 @@ you could get this id by the /id command`
             message: 'a Interger must be something matches /^-?[1-9]\\d*$|^0$/'
         }
     ],
-    abouts: [],
+    abouts: [
+        {
+            name: 'color',
+            postFix: 'parameter',
+            about: 'please view https://shields.io/ for details'
+        }
+    ],
     examples: [
         '/{command}@{bot_name} left | right| green',
         '/{command}@{bot_name} girlfriend | not found | red'
