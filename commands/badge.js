@@ -27,6 +27,12 @@ you could get this id by the /id command`
         postFix: 'parameter',
         about: `please view https://shields.io/ for details
 This bot also transform common css color names and #FFFFFF format to formats that shields.io accepts`
+    }, {
+        name: 'inline',
+        postFix: 'mode',
+        about: `you could also use this in inline mode just like:
+@{bot_name} left | right| green;
+notice: you must add a \`;\` at line end, or it will be ignored`
     }],
     examples: [
         '/{command}@{bot_name} left | right| green',

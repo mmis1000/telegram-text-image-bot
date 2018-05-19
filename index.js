@@ -4,6 +4,7 @@ const { createCanvas, loadImage, Image } = require('canvas')
 var request = require('request');
 
 var gtoken = require('./config').token;
+var channelBuffer = require('./config').channel;
 /*
 var api = new telegram({
     token: gtoken,
@@ -164,30 +165,64 @@ api.on('inline_query', function (query) {
     var filtered = text.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]|(?:.|\r|\n)/g);
     if (filtered == null) return;
     
-    
-    api.answerInlineQuery(query.id, [{
-        type: 'article',
-        id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
-        title: 'Ascii Art (ascii only)',
-        message_text: '```\n' + getSimple(text).replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
-        parse_mode: 'Markdown'
-    }, {
-        type: 'article',
-        id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
-        title: 'Ascii Art (unicode)',
-        message_text: '```\n' + getBraille(text).replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
-        parse_mode: 'Markdown'
-    }, {
-        type: 'article',
-        id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
-        title: 'Ascii Art (unicode) with align fix for windows',
-        message_text: '```\n' + getBraille(text).replace(/\u2800/g, '⠁').replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
-        parse_mode: 'Markdown'
-    }], function (err, res) {
-        if (err) return console.error(res);
-        console.log(res);
-    })
+    if (!/;\s*$/.test(text)) {
+        api.answerInlineQuery(query.id, [{
+            type: 'article',
+            id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
+            title: 'Ascii Art (ascii only)',
+            message_text: '```\n' + getSimple(text).replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
+            parse_mode: 'Markdown'
+        }, {
+            type: 'article',
+            id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
+            title: 'Ascii Art (unicode)',
+            message_text: '```\n' + getBraille(text).replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
+            parse_mode: 'Markdown'
+        }, {
+            type: 'article',
+            id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
+            title: 'Ascii Art (unicode) with align fix for windows',
+            message_text: '```\n' + getBraille(text).replace(/\u2800/g, '⠁').replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
+            parse_mode: 'Markdown'
+        }], function (err, res) {
+            if (err) return console.error(res);
+            console.log(res);
+        })
+    } else {
+        var p = generateStickerId(gtoken, text);
+        
+        if (!text) {
+            return;
+        }
+        
+        p.then((id)=>{
+            api.answerInlineQuery(query.id, [{
+                type: 'sticker',
+                id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
+                title: 'sticker',
+                sticker_file_id: id
+            }], function (err, res) {
+                if (err) {
+                    debugger;
+                    return console.error(err);
+                }
+                
+                console.log(res);
+            })
+        }).catch((err)=>{
+            api.answerInlineQuery(query.id, [{
+                type: 'article',
+                id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
+                title: 'Error ' + err.message,
+                message_text: 'no result due to error'
+            }], function (err, res) {
+                if (err) return console.error(res);
+                console.log(res);
+            })
+        })
+    }
 })
+
 api.on('chosen_inline_result', function (result) {
     console.log(result);
 })
@@ -223,3 +258,105 @@ api.on('message', function(message) {
         });
     }
 });
+
+function sendSticker(token, sticker, fileName, MIME, chat_id, other_args) {
+    other_args = ('object' == typeof other_args) ? JSON.parse(JSON.stringify(other_args)) : {};
+    other_args.chat_id = chat_id;
+
+    other_args.sticker = {
+        value: sticker,
+        options: {
+            filename: fileName,
+            contentType: MIME
+        }
+    }
+    
+    return new Promise((resolve, reject)=>{
+        request.post({
+            url: 'https://api.telegram.org/bot' + token + '/sendSticker',
+            formData: other_args
+        }, function(err, response, body) {
+            if (err) return reject(err);
+    
+            resolve(JSON.parse(body));
+        });
+    })
+}
+
+const cssColorNames = require("css-color-names");
+function generateStickerId(token, text) {
+    var WIDTH = 512;
+    var HEIGHT = 120;
+    var texts = text.split(/\|/g).map((str) => str.replace(/^\s+|\s+$/g, ''));
+
+    if (texts.length < 2) {
+        return false;
+    }
+
+    let color = (texts.length >= 3 ? texts[2] : 'green').replace(/[^a-zA-Z0-9#]/g, '').toLowerCase();
+
+    const colorEnums = [
+        'brightgreen',
+        'green',
+        'yellowgreen',
+        'yellow',
+        'orange',
+        'red',
+        'lightgrey',
+        'blue'
+    ]
+
+    if (colorEnums.indexOf(color) < 0) {
+        if (/^#[a-f0-9]{6,6}$/.test(color)) {
+            color = color.slice(1);
+        } else if (cssColorNames[color] != null) {
+            color = cssColorNames[color].slice(1);
+        }
+    }
+
+    const canvas = createCanvas(WIDTH, HEIGHT),
+        ctx = canvas.getContext('2d');
+
+    const filename = encodeURIComponent(texts[0]).replace(/\-/g, '--') + '-' +
+        encodeURIComponent(texts[1]).replace(/\-/g, '--') + '-' +
+        encodeURIComponent(color) +
+        '.svg';
+
+
+    return new Promise((resolve, reject)=>{
+        request.get({
+            url: 'https://img.shields.io/badge/' + filename,
+            encoding: null
+        }, function(error, response, body) {
+            if (error) return reject(error);
+    
+            loadImage(body)
+            .then(function(image) {
+                const newHeight = 80;
+                const newWidth = Math.min(newHeight / image.naturalHeight * image.naturalWidth, 480);
+                image.height = newHeight;
+                image.width = newWidth;
+
+                ctx.clearRect(0, 0, WIDTH, HEIGHT);
+                ctx.drawImage(image, (WIDTH - newWidth) / 2, (HEIGHT - newHeight) / 2);
+
+                var file = canvas.toBuffer();
+
+                if (!file) return reject(new Error('error during make image'));
+
+                return resolve(file);
+
+            })
+            .catch(function(err) {
+                return reject(err);
+            })
+        })
+
+    })
+    .then(function (file) {
+        return sendSticker(token, file, 'test.png', 'image/png', channelBuffer, {});
+    })
+    .then(function (message) {
+        return message.result.sticker.file_id;
+    })
+}

@@ -111,7 +111,7 @@ module.exports.usage = function(command, botname, rule) {
         if (flag.about) {
             abouts.push({
                 names: flag.short ? (flag.long ? ['-' + flag.short, '--' + flag.long] : ['-' + flag.short]) : ['--' + flag.long],
-                postFix: 'Options',
+                postFix: 'options',
                 about: flag.about
             })
         }
@@ -148,7 +148,7 @@ module.exports.usage = function(command, botname, rule) {
 
     for (let item of abouts) {
         result += 'About the ' + item.names.map((str) => `\`${str}\``).join(', ') + ' ' + item.postFix + '\n\n';
-        result += item.about + '\n\n';
+        result += substitute(item.about) + '\n\n';
     }
 
     result += 'Examples:\n'
