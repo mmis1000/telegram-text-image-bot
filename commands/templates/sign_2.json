@@ -1,0 +1,28 @@
+{
+    "name": "請退選",
+    "size": {
+        "width": 492,
+        "height": 512
+    },
+    "images": [
+        {
+            "name": "sign_1.png",
+            "x": 0,
+            "y": 0
+        }
+    ],
+    "textAreas": [{
+        "center": {
+            "x": 212,
+            "y": 73
+        },
+        "size": {
+            "height": 70,
+            "width": 274
+        },
+        "maxFontSize": 60,
+        "linePadding": 0.07,
+        "rotate": 0.27925268031,
+        "color": "white"
+    }]
+}

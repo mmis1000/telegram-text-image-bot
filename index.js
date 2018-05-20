@@ -170,13 +170,13 @@ api.on('inline_query', function (query) {
             type: 'article',
             id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
             title: 'Ascii Art (ascii only)',
-            message_text: '```\n' + getSimple(text).replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
+            message_text: '```\n' + getSimple(text).replace(/^/, '\u200b').replace(/\n{3,}/g, '\n\n') + '\n```',
             parse_mode: 'Markdown'
         }, {
             type: 'article',
             id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
             title: 'Ascii Art (unicode)',
-            message_text: '```\n' + getBraille(text).replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
+            message_text: '```\n' + getBraille(text).replace(/^/, '\u200b').replace(/\n{3,}/g, '\n\n') + '\n```',
             parse_mode: 'Markdown'
         }, {
             type: 'article',
@@ -227,13 +227,14 @@ api.on('chosen_inline_result', function (result) {
     console.log(result);
 })
 
+const commands = [
+    require("./commands/textImage"),
+    require("./commands/badge"),
+    require("./commands/template"),
+];
+
 api.on('message', function(message) {
     console.log(message);
-    
-    var commands = [
-        require("./commands/textImage"),
-        require("./commands/badge"),
-    ]
     
     for (let command of commands) {
         if (command(gtoken, selfData, message)) {

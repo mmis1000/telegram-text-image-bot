@@ -1,3 +1,8 @@
+const cssColorNames = require("css-color-names");
+const { createCanvas, loadImage } = require('canvas');
+const parser = require("../argumentParser.js")
+const request = require('request');
+
 const Info = {
     description: `Generate a badge\nAll credits to https://shields.io/`,
     usage: `/{command}@{bot_name} \\[flags] \\[--] <left> | <right> \\[| color]`,
@@ -39,11 +44,6 @@ notice: you must add a \`;\` at line end, or it will be ignored`
         '/{command}@{bot_name} girlfriend | not found | red'
     ]
 };
-
-const cssColorNames = require("css-color-names");
-const { createCanvas, loadImage } = require('canvas')
-const parser = require("../argumentParser.js")
-const request = require('request');
 
 module.exports = function(token, botInfo, message) {
     if (!message || !message.text) {

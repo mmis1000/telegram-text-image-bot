@@ -1,0 +1,29 @@
+{
+    "name": "笨蛋",
+    "size": {
+        "width": 512,
+        "height": 512
+    },
+    "images": [
+        {
+            "name": "sign_2.png",
+            "x": 0,
+            "y": 0
+        }
+    ],
+    "textAreas": [{
+        "center": {
+            "x": 321,
+            "y": 77
+        },
+        "size": {
+            "height": 87,
+            "width": 367
+        },
+        "maxFontSize": 60,
+        "linePadding": 0.3,
+        "rotate": 0.27,
+        "color": "pink",
+        "font": "Comic Sans MS"
+    }]
+}

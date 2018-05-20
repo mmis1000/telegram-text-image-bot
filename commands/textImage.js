@@ -1,3 +1,7 @@
+const { createCanvas } = require('canvas')
+const parser = require("../argumentParser.js")
+const request = require('request');
+
 const Info = {
     description: `Generate a text sticker`,
     usage: `/{command}@{bot_name} \\[flags] \\[--] <text>`,
@@ -72,8 +76,8 @@ you could get this id by the /id command`
             desc: "set the shadow blur"
         },
         {
-            long: 'shadowBlur',
-            requireText: 'Int',
+            long: 'shadowColor',
+            requireText: 'String',
             desc: "set the shadow color"
         },
     ],
@@ -92,10 +96,6 @@ you could get this id by the /id command`
         '/{command}@{bot_name} --font=monospace test'
     ]
 };
-
-const { createCanvas } = require('canvas')
-const parser = require("../argumentParser.js")
-const request = require('request');
 
 module.exports = function(token, botInfo, message) {
     if (!message || !message.text) {
