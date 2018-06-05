@@ -23,6 +23,7 @@
         "maxFontSize": 100,
         "linePadding": 0.3,
         "rotate": -0.07504915783,
+        "skewX": -0.06,
         "color": "black"
     }]
 }

@@ -189,7 +189,7 @@ api.on('inline_query', function (query) {
             console.log(res);
         })
     } else {
-        var p = generateStickerId(gtoken, text);
+        var p = generateStickerId(gtoken, text.replace(/;\s*$/, ''));
         
         if (!text) {
             return;
@@ -288,8 +288,19 @@ const cssColorNames = require("css-color-names");
 function generateStickerId(token, text) {
     var WIDTH = 512;
     var HEIGHT = 120;
-    var texts = text.split(/\|/g).map((str) => str.replace(/^\s+|\s+$/g, ''));
-
+    // var texts = text.split(/\|/g).map((str) => str.replace(/^\s+|\s+$/g, ''));
+    var texts = text.match(/\\\||\\\\|./g).reduce((prev, curr)=>{
+        if (curr === '|') {
+            prev.push('');
+        } else if (curr.length === 2) {
+            prev[prev.length - 1] += curr[1]
+        } else {
+            prev[prev.length - 1] += curr
+        }
+        
+        return prev;
+    }, ['']).map((str) => str.replace(/^\s+|\s+$/g, ''));
+    
     if (texts.length < 2) {
         return false;
     }

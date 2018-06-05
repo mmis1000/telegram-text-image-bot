@@ -245,7 +245,7 @@ module.exports = function(token, botInfo, message) {
         ctx.translate(area.center.x, area.center.y);
         ctx.rotate(area.rotate);
         ctx.translate(-area.size.width / 2, -area.size.height / 2);
-        
+        skewX(ctx, area.skewX || 0, area.size.height);
         
         font = flags.font || area.font ||"\"Source Han Sans\"";
 
@@ -400,4 +400,8 @@ function printUsages(token, botInfo, chat_id, other_args) {
 
         console.log(body);
     });
+}
+
+function skewX(ctx, radian, height) {
+    ctx.transform(1, 0, Math.tan(radian), 1, (height || ctx.canvas.height) * Math.tan(-radian) / 2, 0);
 }

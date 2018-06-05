@@ -41,7 +41,9 @@ notice: you must add a \`;\` at line end, or it will be ignored`
     }],
     examples: [
         '/{command}@{bot_name} left | right| green',
-        '/{command}@{bot_name} girlfriend | not found | red'
+        '/{command}@{bot_name} -d girlfriend | not found | red',
+        '/{command}@{bot_name} -p girlfriend | not found | blue',
+        '/{command}@{bot_name} escape | sequence \\\\\\|'
     ]
 };
 
@@ -86,8 +88,20 @@ module.exports = function(token, botInfo, message) {
 
     var WIDTH = 512;
     var HEIGHT = 120;
-    var texts = text.split(/\|/g).map((str) => str.replace(/^\s+|\s+$/g, ''));
-
+    // var texts = text.split(/\|/g).map((str) => str.replace(/^\s+|\s+$/g, ''));
+    
+    var texts = text.match(/\\\||\\\\|./g).reduce((prev, curr)=>{
+        if (curr === '|') {
+            prev.push('');
+        } else if (curr.length === 2) {
+            prev[prev.length - 1] += curr[1]
+        } else {
+            prev[prev.length - 1] += curr
+        }
+        
+        return prev;
+    }, ['']).map((str) => str.replace(/^\s+|\s+$/g, ''));
+    
     if (texts.length < 2) {
         printText(
             token,

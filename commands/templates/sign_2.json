@@ -18,11 +18,12 @@
         },
         "size": {
             "height": 70,
-            "width": 274
+            "width": 268
         },
         "maxFontSize": 60,
         "linePadding": 0.07,
         "rotate": 0.27925268031,
+        "skewX": -0.05,
         "color": "white"
     }]
 }
