@@ -1,0 +1,31 @@
+{
+    "name": "rereretarded",
+    "size": {
+        "width": 480,
+        "height": 375
+    },
+    "images": [
+        {
+            "name": "comic_0rr.png",
+            "x": 0,
+            "y": 0
+        }
+    ],
+    "textAreas": [{
+        "center": {
+            "x": 359,
+            "y": 62
+        },
+        "size": {
+            "height": 60,
+            "width": 220
+        },
+        "maxFontSize": 23,
+        "linePadding": 0.05,
+        "rotate": 0,
+        "skewX": 0,
+        "color": "black",
+        "font": "Times New Roman",
+        "fontStyle": "bold"
+    }]
+}

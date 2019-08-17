@@ -1,0 +1,30 @@
+{
+    "name": "crime-news",
+    "size": {
+        "width": 480,
+        "height": 360
+    },
+    "images": [
+        {
+            "name": "crime_news.jpg",
+            "x": 0,
+            "y": 0
+        }
+    ],
+    "textAreas": [{
+        "center": {
+            "x": 183,
+            "y": 273
+        },
+        "size": {
+            "height": 36,
+            "width": 335
+        },
+        "maxFontSize": 23,
+        "linePadding": 0.05,
+        "rotate": 0,
+        "skewX": 0,
+        "color": "white",
+        "fontStyle": "bold"
+    }]
+}

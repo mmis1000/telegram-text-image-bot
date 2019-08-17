@@ -85,10 +85,6 @@ module.exports = function(token, botInfo, message) {
         printUsages(token, botInfo, message.chat.id, { reply_to_message_id: message.message_id });
         return true;
     }
-
-    var WIDTH = 512;
-    var HEIGHT = 120;
-    // var texts = text.split(/\|/g).map((str) => str.replace(/^\s+|\s+$/g, ''));
     
     var texts = text.match(/\\\||\\\\|./g).reduce((prev, curr)=>{
         if (curr === '|') {
@@ -134,66 +130,45 @@ module.exports = function(token, botInfo, message) {
         }
     }
 
-    const canvas = createCanvas(WIDTH, HEIGHT),
-        ctx = canvas.getContext('2d');
-
     const filename = encodeURIComponent(texts[0]).replace(/\-/g, '--') + '-' +
         encodeURIComponent(texts[1]).replace(/\-/g, '--') + '-' +
         encodeURIComponent(color) +
         '.svg';
 
-    request.get({
-        url: 'https://img.shields.io/badge/' + filename,
-        encoding: null
-    }, function(error, response, body) {
-        console.log(filename);
+    makeBadge(filename)
+    .then(function (file){
+        var targetId = message.chat.id;
 
-        loadImage(body)
-            .then(function(image) {
-                const newHeight = 80;
-                const newWidth = Math.min(newHeight / image.naturalHeight * image.naturalWidth, 480);
-                image.height = newHeight;
-                image.width = newWidth;
+        var additionOptions = {
+            reply_to_message_id: message.message_id
+        }
 
-                ctx.clearRect(0, 0, WIDTH, HEIGHT);
-                ctx.drawImage(image, (WIDTH - newWidth) / 2, (HEIGHT - newHeight) / 2);
+        if (flags.o) {
+            targetId = parseInt(flags.o);
+            additionOptions = {};
+        }
 
-                var file = canvas.toBuffer();
-
-                if (!file) return console.error('error during make image');
-
-                var targetId = message.chat.id;
-
-                var additionOptions = {
-                    reply_to_message_id: message.message_id
-                }
-
-                if (flags.o) {
-                    targetId = parseInt(flags.o);
-                    additionOptions = {};
-                }
-
-                if (flags.d) {
-                    sendDocument(token, file, 'test.png', 'image/png', targetId, additionOptions)
-                } else if (flags.p) {
-                    sendPhoto(token, file, 'test.png', 'image/png', targetId, additionOptions)
-                } else {
-                    sendSticker(token, file, 'test.png', 'image/png', targetId, additionOptions)
-                }
-            })
-            .catch(function(err) {
-                printText(
-                    token,
-                    botInfo,
-                    message.chat.id,
-                    err.message, { reply_to_message_id: message.message_id }
-                )
-            })
+        if (flags.d) {
+            sendDocument(token, file, 'test.png', 'image/png', targetId, additionOptions)
+        } else if (flags.p) {
+            sendPhoto(token, file, 'test.png', 'image/png', targetId, additionOptions)
+        } else {
+            sendSticker(token, file, 'test.png', 'image/png', targetId, additionOptions)
+        }
+    })
+    .catch(function(err) {
+        printText(
+            token,
+            botInfo,
+            message.chat.id,
+            err.message, { reply_to_message_id: message.message_id }
+        )
     })
 
     return true;
 }
 
+module.exports.makeBadge = makeBadge;
 
 function sendDocument(token, document, fileName, MIME, chat_id, other_args) {
     other_args = ('object' == typeof other_args) ? JSON.parse(JSON.stringify(other_args)) : {};
@@ -292,4 +267,43 @@ function printUsages(token, botInfo, chat_id, other_args) {
 
         console.log(body);
     });
+}
+
+function makeBadge(filename) {
+    const WIDTH = 512;
+    const HEIGHT = 120;
+
+    const canvas = createCanvas(WIDTH, HEIGHT),
+        ctx = canvas.getContext('2d');
+    
+    return new Promise((resolve, reject)=>{
+        request.get({
+            url: 'https://img.shields.io/badge/' + filename,
+            encoding: null
+        }, function(error, response, body) {
+            console.log(filename);
+    
+            loadImage(body)
+                .then(function(image) {
+                    const newHeight = 80;
+                    const newWidth = Math.min(newHeight / image.naturalHeight * image.naturalWidth, 480);
+                    image.height = newHeight;
+                    image.width = newWidth;
+    
+                    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+                    ctx.drawImage(image, (WIDTH - newWidth) / 2, (HEIGHT - newHeight) / 2);
+    
+                    var file = canvas.toBuffer();
+    
+                    if (!file) {
+                        return reject(new Error('error during make image'));
+                    }
+                    
+                    resolve(file);
+                })
+                .catch(function(err) {
+                    reject(err);
+                })
+        })
+    })
 }
