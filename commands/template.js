@@ -185,6 +185,8 @@ module.exports = function(token, botInfo, message) {
 
 module.exports.makeSticker = makeSticker;
 
+module.exports.templates = templates
+
 function sendDocument(token, document, fileName, MIME, chat_id, other_args) {
     other_args = ('object' == typeof other_args) ? JSON.parse(JSON.stringify(other_args)) : {};
     other_args.chat_id = chat_id;
@@ -288,22 +290,29 @@ function skewX(ctx, radian, height) {
     ctx.transform(1, 0, Math.tan(radian), 1, (height || ctx.canvas.height) * Math.tan(-radian) / 2, 0);
 }
 
-function makeSticker(flags, text, templateName) {
+function makeSticker(flags, text, templateName, mime = 'image/png') {
     const template = templates[templateName]
     
+    const clampSize = flags.clampSize ? Number(flags.clampSize) : 512
+
     const fixTo = 
         template.size.width > template.size.height ?
         "width":
         "height";
     
-    const realWidth = fixTo == "width" ? 512: Math.floor(template.size.width * 512 / template.size.height);
-    const realHeight = fixTo == "height" ? 512: Math.floor(template.size.height * 512 / template.size.width);
+    const realWidth = fixTo == "width" ? clampSize: Math.floor(template.size.width * clampSize / template.size.height);
+    const realHeight = fixTo == "height" ? clampSize: Math.floor(template.size.height * clampSize / template.size.width);
     
     const WIDTH = template.size.width;
     const HEIGHT = template.size.height;
     
     const canvas = createCanvas(realWidth, realHeight),
         ctx = canvas.getContext('2d');
+
+    if (mime === 'image/jpeg') {
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, realWidth, realHeight)
+    }
         
     ctx.scale(realWidth / WIDTH, realHeight / HEIGHT);
     
@@ -429,8 +438,13 @@ function makeSticker(flags, text, templateName) {
         ctx.restore();
     });
     
-    
-    var file = canvas.toBuffer();
-    
+    if (mime === 'image/jpeg') {
+        var file = canvas.toBuffer(mime, {quality: 0.75, progressive: false, chromaSubsampling: true});
+    } else {
+        var file = canvas.toBuffer(mime);
+    }
+    file.width = realWidth
+    file.height = realHeight
+
     return file;
 }

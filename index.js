@@ -5,6 +5,9 @@ var request = require('request');
 
 var gtoken = require('./config').token;
 var channelBuffer = require('./config').channel;
+
+require('./server')
+
 /*
 var api = new telegram({
     token: gtoken,
@@ -158,6 +161,9 @@ function getBraille(text) {
     return finalText;
 }
 api.on('inline_query', function (query) {
+    var templates = require('./commands/template').templates
+    var config = require('./config')
+
     console.log(query);
     
     var text = query.query;
@@ -166,44 +172,56 @@ api.on('inline_query', function (query) {
     if (filtered == null) return;
     
     if (!/;\s*$/.test(text)) {
-        api.answerInlineQuery(query.id, [{
-            type: 'article',
-            id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
-            title: 'Ascii Art (ascii only)',
-            message_text: '```\n' + getSimple(text).replace(/^/, '\u200b').replace(/\n{3,}/g, '\n\n') + '\n```',
-            parse_mode: 'Markdown'
-        }, {
-            type: 'article',
-            id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
-            title: 'Ascii Art (unicode)',
-            message_text: '```\n' + getBraille(text).replace(/^/, '\u200b').replace(/\n{3,}/g, '\n\n') + '\n```',
-            parse_mode: 'Markdown'
-        }, {
-            type: 'article',
-            id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
-            title: 'Ascii Art (unicode) with align fix for windows',
-            message_text: '```\n' + getBraille(text).replace(/\u2800/g, '⠁').replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
-            parse_mode: 'Markdown'
-        }], function (err, res) {
+        api.answerInlineQuery(query.id, [
+            // {
+            //     type: 'article',
+            //     id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
+            //     title: 'Ascii Art (ascii only)',
+            //     message_text: '```\n' + getSimple(text).replace(/^/, '\u200b').replace(/\n{3,}/g, '\n\n') + '\n```',
+            //     parse_mode: 'Markdown'
+            // }, {
+            //     type: 'article',
+            //     id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
+            //     title: 'Ascii Art (unicode)',
+            //     message_text: '```\n' + getBraille(text).replace(/^/, '\u200b').replace(/\n{3,}/g, '\n\n') + '\n```',
+            //     parse_mode: 'Markdown'
+            // }, {
+            //     type: 'article',
+            //     id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
+            //     title: 'Ascii Art (unicode) with align fix for windows',
+            //     message_text: '```\n' + getBraille(text).replace(/\u2800/g, '⠁').replace(/^\s/, '.').replace(/\n{3,}/g, '\n\n') + '\n```',
+            //     parse_mode: 'Markdown'
+            // }, 
+            ...Object.keys(templates).map(k => {
+                    return {
+                        type: 'photo',
+                        id: k + '/' + text,
+                        photo_url: config.publicPath + 'sticker/' + encodeURIComponent(k) + '/' + encodeURIComponent(text),
+                        thumb_url: config.publicPath + 'sticker/' + encodeURIComponent(k) + '/' + encodeURIComponent(text),
+                        title: k
+                    }
+                }
+            )
+        ], function (err, res) {
             if (err) return console.error(res);
             console.log(res);
         })
     } else {
         var p = generateStickerId(gtoken, text.replace(/;\s*$/, ''));
-        
-        if (!text) {
-            return;
-        }
+
+        if (!p) return
         
         p.then((id)=>{
-            api.answerInlineQuery(query.id, [{
-                type: 'sticker',
-                id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
-                title: 'sticker',
-                sticker_file_id: id
-            }], function (err, res) {
+            api.answerInlineQuery(query.id, [
+                {
+                    type: 'sticker',
+                    id: ("00000000" + (0x100000000 * Math.random()).toString(16)).slice(-8),
+                    title: 'sticker',
+                    sticker_file_id: id
+                }
+            ], 
+            function (err, res) {
                 if (err) {
-                    debugger;
                     return console.error(err);
                 }
                 

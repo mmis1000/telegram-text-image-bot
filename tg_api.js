@@ -105,6 +105,7 @@ TelegramAPI.prototype._invoke = function _invoke(apiName, params, cb, multiPart)
     request.post(requestData, function (err, response, body) {
         // console.log(response);
         if (err || response.statusCode !== 200) {
+            console.log(response.body)
             return cb(err || new Error('unexpect response code: ' + response.statusCode));
         }
         try {
