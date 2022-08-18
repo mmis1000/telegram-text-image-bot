@@ -6,6 +6,7 @@ const fs = require("fs");
 const runes = require('runes2').runes
 
 const templates = {};
+const containsPunctuation = (c) => /[\p{Close_Punctuation}\p{Open_Punctuation}]/u.test(c)
 
 function loadTemplate(name) {
     return new  Promise((resolve, reject)=>{
@@ -495,8 +496,18 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
                 for (const [index, char] of chars.entries()) {
                     const x = area.size.width / 2 - offset;
                     const y = area.size.height / 2 + (index - chars.length / 2 + 0.5) * fontSize;
-                    // FIXME: emoji didn't work well currently, so we remove it for now
-                    ctx.fillText(char.replace(/\ufe0f$/, ''), x, y);
+                    if (!containsPunctuation(char)) {
+                        // FIXME: emoji didn't work well currently, so we remove it for now
+                        ctx.fillText(char.replace(/\ufe0f$/, ''), x, y);
+                    } else {
+                        ctx.save()
+                        ctx.translate(x, y)
+                        ctx.rotate(Math.PI / 2)
+                        ctx.translate(-x, -y)
+                        // FIXME: emoji didn't work well currently, so we remove it for now
+                        ctx.fillText(char.replace(/\ufe0f$/, ''), x, y);
+                        ctx.restore()
+                    }
                 }
             }
         })
