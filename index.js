@@ -1,7 +1,6 @@
 var brailleMap = "⠀⠁⠂⠃⠄⠅⠆⠇⡀⡁⡂⡃⡄⡅⡆⡇⠈⠉⠊⠋⠌⠍⠎⠏⡈⡉⡊⡋⡌⡍⡎⡏⠐⠑⠒⠓⠔⠕⠖⠗⡐⡑⡒⡓⡔⡕⡖⡗⠘⠙⠚⠛⠜⠝⠞⠟⡘⡙⡚⡛⡜⡝⡞⡟⠠⠡⠢⠣⠤⠥⠦⠧⡠⡡⡢⡣⡤⡥⡦⡧⠨⠩⠪⠫⠬⠭⠮⠯⡨⡩⡪⡫⡬⡭⡮⡯⠰⠱⠲⠳⠴⠵⠶⠷⡰⡱⡲⡳⡴⡵⡶⡷⠸⠹⠺⠻⠼⠽⠾⠿⡸⡹⡺⡻⡼⡽⡾⡿⢀⢁⢂⢃⢄⢅⢆⢇⣀⣁⣂⣃⣄⣅⣆⣇⢈⢉⢊⢋⢌⢍⢎⢏⣈⣉⣊⣋⣌⣍⣎⣏⢐⢑⢒⢓⢔⢕⢖⢗⣐⣑⣒⣓⣔⣕⣖⣗⢘⢙⢚⢛⢜⢝⢞⢟⣘⣙⣚⣛⣜⣝⣞⣟⢠⢡⢢⢣⢤⢥⢦⢧⣠⣡⣢⣣⣤⣥⣦⣧⢨⢩⢪⢫⢬⢭⢮⢯⣨⣩⣪⣫⣬⣭⣮⣯⢰⢱⢲⢳⢴⢵⢶⢷⣰⣱⣲⣳⣴⣵⣶⣷⢸⢹⢺⢻⢼⢽⢾⢿⣸⣹⣺⣻⣼⣽⣾⣿".split('');
 
-const { Canvas, loadImage, Image, FontLibrary } = require('skia-canvas')
-const createCanvas = (width, height) => new Canvas(width, height);
+const { createCanvas: createCanvasNode, loadImage: loadImageNode } = require('canvas')
 var request = require('request');
 
 var gtoken = require('./config').token;
@@ -345,7 +344,7 @@ function generateStickerId(token, text) {
         }
     }
 
-    const canvas = createCanvas(WIDTH, HEIGHT),
+    const canvas = createCanvasNode(WIDTH, HEIGHT),
         ctx = canvas.getContext('2d');
 
     const filename = encodeURIComponent(texts[0]).replace(/\-/g, '--') + '-' +
@@ -361,7 +360,7 @@ function generateStickerId(token, text) {
         }, function(error, response, body) {
             if (error) return reject(error);
     
-            loadImage(body)
+            loadImageNode(body)
             .then(function(image) {
                 const newHeight = 80;
                 const newWidth = Math.min(newHeight / image.naturalHeight * image.naturalWidth, 480);
@@ -371,7 +370,7 @@ function generateStickerId(token, text) {
                 ctx.clearRect(0, 0, WIDTH, HEIGHT);
                 ctx.drawImage(image, (WIDTH - newWidth) / 2, (HEIGHT - newHeight) / 2);
 
-                var file = canvas.toBufferSync();
+                var file = canvas.toBuffer();
 
                 if (!file) return reject(new Error('error during make image'));
 

@@ -10,6 +10,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "canvas": "^2.9.3",
     "css-color-names": "0.0.4",
     "express": "^4.17.1",
     "request": "^2.86.0",

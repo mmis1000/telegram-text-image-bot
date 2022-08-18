@@ -1,5 +1,5 @@
 const cssColorNames = require("css-color-names");
-const { Canvas, loadImage } = require('skia-canvas');
+const { Canvas, loadImage } = require('canvas');
 const createCanvas = (width, height) => new Canvas(width, height);
 const parser = require("../argumentParser.js")
 const request = require('request');
@@ -294,7 +294,7 @@ function makeBadge(filename) {
                     ctx.clearRect(0, 0, WIDTH, HEIGHT);
                     ctx.drawImage(image, (WIDTH - newWidth) / 2, (HEIGHT - newHeight) / 2);
     
-                    var file = canvas.toBufferSync();
+                    var file = canvas.toBuffer();
     
                     if (!file) {
                         return reject(new Error('error during make image'));
