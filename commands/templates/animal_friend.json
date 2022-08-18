@@ -11,21 +11,39 @@
             "y": 0
         }
     ],
-    "textAreas": [{
-        "vertical": true,
-        "center": {
-            "x": 444,
-            "y": 160
+    "textAreas": [
+        {
+            "vertical": true,
+            "center": {
+                "x": 444,
+                "y": 160
+            },
+            "size": {
+                "height": 240,
+                "width": 100
+            },
+            "maxFontSize": 70,
+            "linePadding": 0.05,
+            "rotate": 0,
+            "skewX": 0,
+            "color": "black",
+            "fontStyle": "bold"
         },
-        "size": {
-            "height": 240,
-            "width": 100
-        },
-        "maxFontSize": 70,
-        "linePadding": 0.05,
-        "rotate": 0,
-        "skewX": 0,
-        "color": "black",
-        "fontStyle": "bold"
-    }]
+        {
+            "center": {
+                "x": 300,
+                "y": 480
+            },
+            "size": {
+                "height": 56,
+                "width": 300
+            },
+            "maxFontSize": 56,
+            "linePadding": 0.05,
+            "rotate": 0,
+            "skewX": 0,
+            "color": "black",
+            "fontStyle": "bold"
+        }
+    ]
 }
