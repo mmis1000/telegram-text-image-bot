@@ -24,6 +24,6 @@
         "linePadding": 0.3,
         "rotate": 0.27,
         "color": "pink",
-        "font": "Comic Sans MS"
+        "font": "\"Noto Color Emoji\", \"Comic Sans MS\""
     }]
 }

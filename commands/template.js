@@ -1,4 +1,5 @@
-const { createCanvas, loadImage } = require('canvas');
+const { Canvas, loadImage } = require('skia-canvas');
+const createCanvas = (width, height) => new Canvas(width, height);
 const parser = require("../argumentParser.js")
 const request = require('request');
 const path = require("path");
@@ -322,7 +323,7 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
         text.replace(/^\s+|\s+$/g, '').split(/[\r\n]+/g).map((str)=>str.replace(/^\s+|\s+$/g, ''))
     );
     
-    var font = flags.font || "\"Source Han Sans\"";
+    var font = flags.font || "\"Noto Color Emoji\", \"Source Han Sans\"";
 
     if (font.match(/\s/) && !font.match(/^"/)) {
         font = '"' + font + '"';
@@ -465,7 +466,7 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
         ctx.translate(-area.size.width / 2, -area.size.height / 2);
         skewX(ctx, area.skewX || 0, area.size.height);
         
-        font = flags.font || area.font ||"\"Source Han Sans\"";
+        font = flags.font || area.font ||"\"Noto Color Emoji\", \"Source Han Sans\"";
 
         if (font.match(/\s/) && !font.match(/^"/)) {
             font = '"' + font + '"';
@@ -497,15 +498,13 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
                     const x = area.size.width / 2 - offset;
                     const y = area.size.height / 2 + (index - chars.length / 2 + 0.5) * fontSize;
                     if (!containsPunctuation(char)) {
-                        // FIXME: emoji didn't work well currently, so we remove it for now
-                        ctx.fillText(char.replace(/\ufe0f$/, ''), x, y);
+                        ctx.fillText(char, x, y);
                     } else {
                         ctx.save()
                         ctx.translate(x, y)
                         ctx.rotate(Math.PI / 2)
                         ctx.translate(-x, -y)
-                        // FIXME: emoji didn't work well currently, so we remove it for now
-                        ctx.fillText(char.replace(/\ufe0f$/, ''), x, y);
+                        ctx.fillText(char, x, y);
                         ctx.restore()
                     }
                 }
@@ -516,9 +515,9 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
     });
     
     if (mime === 'image/jpeg') {
-        var file = canvas.toBuffer(mime, {quality: 0.75, progressive: false, chromaSubsampling: true});
+        var file = canvas.toBufferSync(mime, {quality: 0.75, progressive: false, chromaSubsampling: true});
     } else {
-        var file = canvas.toBuffer(mime);
+        var file = canvas.toBufferSync(mime);
     }
     file.width = realWidth
     file.height = realHeight

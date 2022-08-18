@@ -1,4 +1,5 @@
-const { createCanvas } = require('canvas')
+const { Canvas } = require('skia-canvas')
+const createCanvas = (width, height) => new Canvas(width, height);
 const parser = require("../argumentParser.js")
 const request = require('request');
 
@@ -38,7 +39,7 @@ you could get this id by the /id command`
         {
             long: 'font',
             requireText: 'String',
-            desc: "don't send as sticker, send as a document instead"
+            desc: "font to use"
         },
         {
             long: 'strokeWidth',
@@ -124,7 +125,7 @@ module.exports = function(token, botInfo, message) {
             token,
             botInfo,
             message.chat.id,
-            err.message + `\nUse /textImage@${botInfo.username} to see more detail`, { reply_to_message_id: message.message_id }
+            err.message + `\nUse /maketext@${botInfo.username} to see more detail`, { reply_to_message_id: message.message_id }
         );
 
         return true;
@@ -157,7 +158,7 @@ module.exports = function(token, botInfo, message) {
         ctx = canvas.getContext('2d');
 
     var fontSize = WIDTH / 2;
-    var font = flags.font || "\"Source Han Sans\"";
+    var font = flags.font || "\"Noto Color Emoji\", \"Source Han Sans\"";
 
     if (font.match(/\s/) && !font.match(/^"/)) {
         font = '"' + font + '"';
@@ -268,7 +269,7 @@ module.exports = function(token, botInfo, message) {
     })
 
 
-    var file = canvas.toBuffer();
+    var file = canvas.toBufferSync();
 
     if (!file) return console.error('error during make image');
 
