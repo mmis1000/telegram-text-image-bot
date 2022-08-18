@@ -1,0 +1,31 @@
+{
+    "name": "ania",
+    "size": {
+        "width": 512,
+        "height": 512
+    },
+    "images": [
+        {
+            "name": "ania.png",
+            "x": 0,
+            "y": 0
+        }
+    ],
+    "textAreas": [{
+        "vertical": true,
+        "center": {
+            "x": 75,
+            "y": 216
+        },
+        "size": {
+            "height": 369,
+            "width": 103
+        },
+        "maxFontSize": 100,
+        "linePadding": 0.05,
+        "rotate": 0,
+        "skewX": 0,
+        "color": "black",
+        "fontStyle": "bold"
+    }]
+}

@@ -95,7 +95,7 @@ you could get this id by the /id command`
         }
     }],
     get examples() {
-        return Object.keys(templates).map((name)=>`/{command}@{bot_name} ${name} some text`)
+        return Object.keys(templates).map((name)=>`/{command}@{bot_name} ${name} Some Text`)
     }
 };
 
@@ -345,6 +345,20 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
             height: (fontSize * linePaddingRatio) * (lines.length + 1) + fontSize * lines.length 
         }
     }
+    function textDimensionVertical(lines, linePaddingRatio, fontSize, fontStyle) {
+        let longest = 0;
+
+        lines.forEach(function(text) {
+            var currentLength = fontSize * [...text].length;
+            if (currentLength > longest) longest = currentLength;
+        })
+        
+        return {
+            height: longest,
+            width: (fontSize * linePaddingRatio) * (lines.length + 1) + fontSize * lines.length 
+        }
+    }
+    
     
     function computeProperFontsize(width, height, lines, linePaddingRatio, fontStyle) {
         const upperBound = 1.1;
@@ -381,6 +395,41 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
         return currentFontSize;
     }
     
+    function computeProperFontsizeVertical(width, height, lines, linePaddingRatio, fontStyle) {
+        const upperBound = 1.1;
+        const lowerBound = 0.9;
+        
+        let currentFontSize = height;
+        let currentDimension = textDimensionVertical(lines, linePaddingRatio, height, fontStyle);
+        
+        const areaDimensionRatio = width / height;
+        const textDimensionRatio = currentDimension.width / currentDimension.height;
+        
+        if (textDimensionRatio > areaDimensionRatio) {
+            while (currentDimension.width > width * upperBound || currentDimension.width < width * lowerBound) {
+                if (currentDimension.width > width) {
+                    currentFontSize *= 0.5;
+                } else {
+                    currentFontSize *= 1.2
+                }
+                
+                currentDimension = textDimensionVertical(lines, linePaddingRatio, currentFontSize, fontStyle);
+            }
+        } else {
+            while (currentDimension.height > height * upperBound || currentDimension.height < height * lowerBound) {
+                if (currentDimension.height > height) {
+                    currentFontSize *= 0.8;
+                } else {
+                    currentFontSize *= 1.05
+                }
+                
+                currentDimension = textDimensionVertical(lines, linePaddingRatio, currentFontSize, fontStyle);
+            }
+        }
+        
+        return currentFontSize;
+    }
+    
     // draw each image
     template.images.forEach((item)=>{
         ctx.drawImage(item.image, item.x, item.y);
@@ -394,14 +443,19 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
         
         const lines = texts[index]
         
-        let fontSize = computeProperFontsize(area.size.width, area.size.height, lines, area.linePadding, area.fontStyle);
+        let fontSize = !area.vertical 
+            ? computeProperFontsize(area.size.width, area.size.height, lines, area.linePadding, area.fontStyle)
+            : computeProperFontsizeVertical(area.size.width, area.size.height, lines, area.linePadding, area.fontStyle);
         
         if (fontSize > area.maxFontSize) {
             fontSize = area.maxFontSize;
         }
         
         const totoalHeight = lines.length * fontSize;
-        const padding = (area.size.height - totoalHeight) / (lines.length + 1);
+        const totoalWidth = lines.length * fontSize;
+        const padding = !area.vertical 
+          ? (area.size.height - totoalHeight) / (lines.length + 1)
+          : (area.size.width - totoalWidth) / (lines.length + 1);
         
         ctx.save();
         ctx.translate(area.center.x, area.center.y);
@@ -427,12 +481,22 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
         ctx.textBaseline = 'middle';
     
         lines.forEach((line, lineIndex)=>{
-            // y offset relative to center
-            const offset = (lineIndex - (lines.length - 1) / 2) * (fontSize + padding);
-            const x = area.size.width / 2;
-            const y = area.size.height / 2 + offset;
-            // ctx.fillRect(0, 0, area.size.width, area.size.height)
-            ctx.fillText(line, x, y);
+            if (!area.vertical) {
+                // y offset relative to center
+                const offset = (lineIndex - (lines.length - 1) / 2) * (fontSize + padding);
+                const x = area.size.width / 2;
+                const y = area.size.height / 2 + offset;
+                // ctx.fillRect(0, 0, area.size.width, area.size.height)
+                ctx.fillText(line, x, y);
+            } else {
+                const offset = (lineIndex - (lines.length - 1) / 2) * (fontSize + padding);
+                const chars = [...line]
+                for (const [index, char] of chars.entries()) {
+                    const x = area.size.width / 2 - offset;
+                    const y = area.size.height / 2 + (index - chars.length / 2 + 0.5) * fontSize;
+                    ctx.fillText(char, x, y);
+                }
+            }
         })
         
         ctx.restore();
