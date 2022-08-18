@@ -1,29 +1,29 @@
 {
-    "name": "請退選",
+    "name": "笨蛋",
     "size": {
-        "width": 492,
+        "width": 512,
         "height": 512
     },
     "images": [
         {
-            "name": "sign_1.png",
+            "name": "sign_2.png",
             "x": 0,
             "y": 0
         }
     ],
     "textAreas": [{
         "center": {
-            "x": 212,
-            "y": 73
+            "x": 321,
+            "y": 77
         },
         "size": {
-            "height": 70,
-            "width": 268
+            "height": 87,
+            "width": 330
         },
         "maxFontSize": 60,
-        "linePadding": 0.07,
-        "rotate": 0.27925268031,
-        "skewX": -0.05,
-        "color": "white"
+        "linePadding": 0.3,
+        "rotate": 0.27,
+        "color": "pink",
+        "font": "Comic Sans MS"
     }]
 }
