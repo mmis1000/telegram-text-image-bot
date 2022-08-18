@@ -3,6 +3,7 @@ const parser = require("../argumentParser.js")
 const request = require('request');
 const path = require("path");
 const fs = require("fs");
+const runes = require('runes2').runes
 
 const templates = {};
 
@@ -349,7 +350,7 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
         let longest = 0;
 
         lines.forEach(function(text) {
-            var currentLength = fontSize * [...text].length;
+            var currentLength = fontSize * runes(text).length;
             if (currentLength > longest) longest = currentLength;
         })
         
@@ -490,11 +491,12 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
                 ctx.fillText(line, x, y);
             } else {
                 const offset = (lineIndex - (lines.length - 1) / 2) * (fontSize + padding);
-                const chars = [...line]
+                const chars = runes(line)
                 for (const [index, char] of chars.entries()) {
                     const x = area.size.width / 2 - offset;
                     const y = area.size.height / 2 + (index - chars.length / 2 + 0.5) * fontSize;
-                    ctx.fillText(char, x, y);
+                    // FIXME: emoji didn't work well currently, so we remove it for now
+                    ctx.fillText(char.replace(/\ufe0f$/, ''), x, y);
                 }
             }
         })
