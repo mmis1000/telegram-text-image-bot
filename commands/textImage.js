@@ -163,12 +163,6 @@ module.exports = function(token, botInfo, message) {
         font = '"' + font + '"';
     }
 
-    ctx.fillStyle = fillColor;
-
-    ctx.strokeStyle = strokeColor;
-    ctx.lineCap = flags.lineCap || 'round';
-    ctx.lineJoin = flags.lineJoin || "round";
-
     ctx.font = fontSize + 'px ' + font;
 
     var longest;
@@ -210,6 +204,12 @@ module.exports = function(token, botInfo, message) {
     } else {
         fontSize = parseInt(flags.fontSize, 10)
     }
+
+    ctx.fillStyle = fillColor;
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineCap = flags.lineCap || 'round';
+    ctx.lineJoin = flags.lineJoin || "round";
 
     ctx.font = fontSize + 'px ' + font;
 
