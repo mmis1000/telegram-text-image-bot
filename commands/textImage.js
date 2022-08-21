@@ -2,6 +2,7 @@ const { Canvas } = require('skia-canvas')
 const createCanvas = (width, height) => new Canvas(width, height);
 const parser = require("../argumentParser.js")
 const request = require('request');
+const { processFonts } = require('../lib/constants.js');
 
 const Info = {
     description: `Generate a text sticker`,
@@ -25,6 +26,10 @@ const Info = {
             desc: "send it to another group or user instead",
             about: `The bot must be inside the group which you would like send the sticker to, otherwise this option won't work
 you could get this id by the /id command`
+        },
+        {
+            long: 'preferMono',
+            desc: "do not use colored emoji"
         },
         {
             long: 'width',
@@ -158,7 +163,7 @@ module.exports = function(token, botInfo, message) {
         ctx = canvas.getContext('2d');
 
     var fontSize = WIDTH / 2;
-    var font = flags.font || "\"Noto Color Emoji\", \"Source Han Sans\"";
+    var font = processFonts(flags.font || "\"Source Han Sans\"", !flags.preferMono);
 
     if (font.match(/\s/) && !font.match(/^"/)) {
         font = '"' + font + '"';
