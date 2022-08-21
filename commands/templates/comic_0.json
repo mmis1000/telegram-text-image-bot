@@ -25,7 +25,7 @@
         "rotate": 0,
         "skewX": 0,
         "color": "black",
-        "font": "\"Noto Color Emoji\", \"Times New Roman\"",
+        "font": "\"Times New Roman\"",
         "fontStyle": "bold"
     }]
 }

@@ -4,6 +4,7 @@ const parser = require("../argumentParser.js")
 const request = require('request');
 const path = require("path");
 const fs = require("fs");
+const { processFonts } = require('../lib/constants.js');
 const runes = require('runes2').runes
 
 const templates = {};
@@ -70,6 +71,10 @@ const Info = {
 you could get this id by the /id command`
         },
         {
+            long: 'preferMono',
+            desc: "do not use colored emoji"
+        },
+        {
             long: 'font',
             requireText: 'String',
             desc: "override the font"
@@ -98,7 +103,7 @@ you could get this id by the /id command`
         }
     }],
     get examples() {
-        return Object.keys(templates).map((name)=>`/{command}@{bot_name} ${name} Some Text`)
+        return Object.keys(templates).map((name)=>`/{command}@{bot_name} ${name} Some Text⁉️`)
     }
 };
 
@@ -141,6 +146,10 @@ module.exports = function(token, botInfo, message) {
     if (!text) {
         printUsages(token, botInfo, message.chat.id, { reply_to_message_id: message.message_id });
         return true;
+    }
+
+    if (flags.preferMono) {
+        text = text.replace(/\ufe0f/g, '\ufe0e');
     }
 
     const templateName = /^(\S+)(?:\s|$)/.exec(text) ? /^(\S+)(?:\s|$)/.exec(text)[1] : null;
@@ -322,18 +331,12 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
     const texts = text.split(/\|/g).map((text)=>
         text.replace(/^\s+|\s+$/g, '').split(/[\r\n]+/g).map((str)=>str.replace(/^\s+|\s+$/g, ''))
     );
-    
-    var font = flags.font || "\"Noto Color Emoji\", \"Source Han Sans\"";
 
-    if (font.match(/\s/) && !font.match(/^"/)) {
-        font = '"' + font + '"';
-    }
-    
-    function textDimension(lines, linePaddingRatio, fontSize, fontStyle) {
+    function textDimension(lines, linePaddingRatio, fontSize, font, fontStyle) {
         if (!flags.fontStyle && !fontStyle) {
             ctx.font = fontSize + 'px ' + font;
         } else {
-            ctx.font = (flags.fontStyle || fontStyle) + ' ' +fontSize + 'px ' + font;
+            ctx.font = (flags.fontStyle || fontStyle) + ' ' + fontSize + 'px ' + font;
         }
         
         let longest = 0;
@@ -348,7 +351,7 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
             height: (fontSize * linePaddingRatio) * (lines.length + 1) + fontSize * lines.length 
         }
     }
-    function textDimensionVertical(lines, linePaddingRatio, fontSize, fontStyle) {
+    function textDimensionVertical(lines, linePaddingRatio, fontSize, font, fontStyle) {
         let longest = 0;
 
         lines.forEach(function(text) {
@@ -361,14 +364,13 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
             width: (fontSize * linePaddingRatio) * (lines.length + 1) + fontSize * lines.length 
         }
     }
-    
-    
-    function computeProperFontsize(width, height, lines, linePaddingRatio, fontStyle) {
+
+    function computeProperFontsize(width, height, lines, linePaddingRatio, font, fontStyle) {
         const upperBound = 1.1;
         const lowerBound = 0.9;
         
         let currentFontSize = height;
-        let currentDimension = textDimension(lines, linePaddingRatio, height, fontStyle);
+        let currentDimension = textDimension(lines, linePaddingRatio, height, font, fontStyle);
         
         const areaDimensionRatio = width / height;
         const textDimensionRatio = currentDimension.width / currentDimension.height;
@@ -381,7 +383,7 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
                     currentFontSize *= 1.2
                 }
                 
-                currentDimension = textDimension(lines, linePaddingRatio, currentFontSize, fontStyle);
+                currentDimension = textDimension(lines, linePaddingRatio, currentFontSize, font, fontStyle);
             }
         } else {
             while (currentDimension.height > height * upperBound || currentDimension.height < height * lowerBound) {
@@ -391,19 +393,19 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
                     currentFontSize *= 1.05
                 }
                 
-                currentDimension = textDimension(lines, linePaddingRatio, currentFontSize, fontStyle);
+                currentDimension = textDimension(lines, linePaddingRatio, currentFontSize, font, fontStyle);
             }
         }
         
         return currentFontSize;
     }
     
-    function computeProperFontsizeVertical(width, height, lines, linePaddingRatio, fontStyle) {
+    function computeProperFontsizeVertical(width, height, lines, linePaddingRatio, font, fontStyle) {
         const upperBound = 1.1;
         const lowerBound = 0.9;
         
         let currentFontSize = height;
-        let currentDimension = textDimensionVertical(lines, linePaddingRatio, height, fontStyle);
+        let currentDimension = textDimensionVertical(lines, linePaddingRatio, height, font, fontStyle);
         
         const areaDimensionRatio = width / height;
         const textDimensionRatio = currentDimension.width / currentDimension.height;
@@ -416,7 +418,7 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
                     currentFontSize *= 1.2
                 }
                 
-                currentDimension = textDimensionVertical(lines, linePaddingRatio, currentFontSize, fontStyle);
+                currentDimension = textDimensionVertical(lines, linePaddingRatio, currentFontSize, font, fontStyle);
             }
         } else {
             while (currentDimension.height > height * upperBound || currentDimension.height < height * lowerBound) {
@@ -426,7 +428,7 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
                     currentFontSize *= 1.05
                 }
                 
-                currentDimension = textDimensionVertical(lines, linePaddingRatio, currentFontSize, fontStyle);
+                currentDimension = textDimensionVertical(lines, linePaddingRatio, currentFontSize, font, fontStyle);
             }
         }
         
@@ -443,12 +445,14 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
         if (!texts[index]) {
             return;
         }
-        
+
+        const areaFont =  processFonts(flags.font || area.font || "\"Source Han Sans\"", !flags.preferMono);
+
         const lines = texts[index]
         
         let fontSize = !area.vertical 
-            ? computeProperFontsize(area.size.width, area.size.height, lines, area.linePadding, area.fontStyle)
-            : computeProperFontsizeVertical(area.size.width, area.size.height, lines, area.linePadding, area.fontStyle);
+            ? computeProperFontsize(area.size.width, area.size.height, lines, area.linePadding, areaFont, area.fontStyle)
+            : computeProperFontsizeVertical(area.size.width, area.size.height, lines, area.linePadding, areaFont, area.fontStyle);
         
         if (fontSize > area.maxFontSize) {
             fontSize = area.maxFontSize;
@@ -466,16 +470,10 @@ function makeSticker(flags, text, templateName, mime = 'image/png') {
         ctx.translate(-area.size.width / 2, -area.size.height / 2);
         skewX(ctx, area.skewX || 0, area.size.height);
         
-        font = flags.font || area.font ||"\"Noto Color Emoji\", \"Source Han Sans\"";
-
-        if (font.match(/\s/) && !font.match(/^"/)) {
-            font = '"' + font + '"';
-        }
-        
         if (!flags.fontStyle && !area.fontStyle) {
-            ctx.font = fontSize + 'px ' + font;
+            ctx.font = fontSize + 'px ' + areaFont;
         } else {
-            ctx.font = (flags.fontStyle || area.fontStyle)+ ' ' + fontSize + 'px ' + font;
+            ctx.font = (flags.fontStyle || area.fontStyle)+ ' ' + fontSize + 'px ' + areaFont;
         }
         
         ctx.fillStyle = flags.color || area.color;
