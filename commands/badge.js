@@ -26,6 +26,10 @@ you could get this id by the /id command`
             desc: "send the raw SVG file without converting to PNG"
         },
         {
+            short: 'u',
+            desc: "return the shields.io URL as text without rendering"
+        },
+        {
             long: 'logo',
             requireText: 'String',
             desc: "logo to display: SimpleIcons name (e.g. javascript), emoji (e.g. 🚀), or base64 data URL (data:image/...;base64,...)"
@@ -153,8 +157,13 @@ module.exports = function(token, botInfo, message) {
         encodeURIComponent(color) +
         '.svg';
 
+    const safeFilename = (texts[0] + '-' + texts[1]).replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || 'badge';
+
     const promise = buildBadgeUrl(filename, flags.logo || null, flags.logocolor || null)
-        .then(svgUrl => flags.s ? fetchSvg(svgUrl) : makeBadge(svgUrl));
+        .then(svgUrl => {
+            if (flags.u) return svgUrl;
+            return flags.s ? fetchSvg(svgUrl) : makeBadge(svgUrl);
+        });
 
     promise.then(function (file){
         var targetId = message.chat.id;
@@ -168,14 +177,16 @@ module.exports = function(token, botInfo, message) {
             additionOptions = {};
         }
 
-        if (flags.s) {
-            sendDocument(token, file, 'badge.svg', 'image/svg+xml', targetId, additionOptions)
+        if (flags.u) {
+            printText(token, botInfo, targetId, file, additionOptions)
+        } else if (flags.s) {
+            sendDocument(token, file, safeFilename + '.svg', 'image/svg+xml', targetId, additionOptions)
         } else if (flags.d) {
-            sendDocument(token, file, 'test.png', 'image/png', targetId, additionOptions)
+            sendDocument(token, file, safeFilename + '.png', 'image/png', targetId, additionOptions)
         } else if (flags.p) {
-            sendPhoto(token, file, 'test.png', 'image/png', targetId, additionOptions)
+            sendPhoto(token, file, safeFilename + '.png', 'image/png', targetId, additionOptions)
         } else {
-            sendSticker(token, file, 'test.png', 'image/png', targetId, additionOptions)
+            sendSticker(token, file, safeFilename + '.png', 'image/png', targetId, additionOptions)
         }
     })
     .catch(function(err) {
