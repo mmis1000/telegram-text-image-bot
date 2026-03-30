@@ -87,7 +87,7 @@ TelegramAPI.prototype._poll = function _poll (timeout, offset, cb) {
     if (offset != null) {
         param.offset = offset
     }
-    return request.get({url:'https://api.telegram.org/bot' + this.token + '/getUpdates', qs:param}, cb)
+    return request.get({url:'https://api.telegram.org/bot' + this.token + '/getUpdates', qs:param, agentOptions: { family: 4 }}, cb)
 }
 
 TelegramAPI.prototype._invoke = function _invoke(apiName, params, cb, multiPart) {
@@ -102,12 +102,12 @@ TelegramAPI.prototype._invoke = function _invoke(apiName, params, cb, multiPart)
         requestData.formData = params;
     }
     requestData.timeout = 10000;
+    requestData.agentOptions = { family: 4 };
     
     request.post(requestData, function (err, response, body) {
-        // console.log(response);
-        if (err || response.statusCode !== 200) {
-            console.log(response.body)
-            return cb(err || new Error('unexpect response code: ' + response.statusCode));
+        if (err || response?.statusCode !== 200) {
+            console.log(response?.body)
+            return cb(err || new Error('unexpect response code: ' + response?.statusCode));
         }
         try {
             body = JSON.parse(body)

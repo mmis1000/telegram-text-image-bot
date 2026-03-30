@@ -291,7 +291,7 @@ function sendSticker(token, sticker, fileName, MIME, chat_id, other_args) {
     }
     
     return new Promise((resolve, reject)=>{
-        request.post({
+        request.post({ agentOptions: { family: 4 },
             url: 'https://api.telegram.org/bot' + token + '/sendSticker',
             formData: other_args
         }, function(err, response, body) {

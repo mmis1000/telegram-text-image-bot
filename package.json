@@ -10,11 +10,14 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "canvas": "^2.9.3",
+    "canvas": "^3.2.2",
     "css-color-names": "0.0.4",
     "express": "^4.17.1",
-    "request": "^2.86.0",
+    "request": "^2.88.2",
     "runes2": "^0.4.16",
-    "skia-canvas": "^1.0.0"
+    "skia-canvas": "^3.0.8"
+  },
+  "devDependencies": {
+    "@types/request": "^2.48.13"
   }
 }

@@ -211,7 +211,7 @@ function sendDocument(token, document, fileName, MIME, chat_id, other_args) {
         }
     }
 
-    request.post({
+    request.post({ agentOptions: { family: 4 },
         url: 'https://api.telegram.org/bot' + token + '/sendDocument',
         formData: other_args
     }, function(err, response, body) {
@@ -233,7 +233,7 @@ function sendPhoto(token, photo, fileName, MIME, chat_id, other_args) {
         }
     }
 
-    request.post({
+    request.post({ agentOptions: { family: 4 },
         url: 'https://api.telegram.org/bot' + token + '/sendPhoto',
         formData: other_args
     }, function(err, response, body) {
@@ -255,7 +255,7 @@ function sendSticker(token, sticker, fileName, MIME, chat_id, other_args) {
         }
     }
 
-    request.post({
+    request.post({ agentOptions: { family: 4 },
         url: 'https://api.telegram.org/bot' + token + '/sendSticker',
         formData: other_args
     }, function(err, response, body) {
@@ -271,7 +271,7 @@ function printText(token, botInfo, chat_id, text, other_args) {
     other_args.chat_id = chat_id;
     other_args.text = text;
 
-    request.post({
+    request.post({ agentOptions: { family: 4 },
         url: 'https://api.telegram.org/bot' + token + '/sendMessage',
         formData: other_args
     }, function(err, response, body) {
@@ -288,7 +288,7 @@ function printUsages(token, botInfo, chat_id, other_args) {
     other_args.text = parser.usage('template', botInfo.username, Info);
     other_args.disable_web_page_preview = 'true';
 
-    request.post({
+    request.post({ agentOptions: { family: 4 },
         url: 'https://api.telegram.org/bot' + token + '/sendMessage',
         formData: other_args
     }, function(err, response, body) {

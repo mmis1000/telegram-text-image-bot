@@ -22,6 +22,20 @@ const Info = {
             about: `The bot must be inside the group which you would like send the sticker to, otherwise this option won't work
 you could get this id by the /id command`
         },
+        {
+            short: 's',
+            desc: "send the raw SVG file without converting to PNG"
+        },
+        {
+            long: 'logo',
+            requireText: 'String',
+            desc: "logo to display: SimpleIcons name (e.g. javascript) or base64 data URL (data:image/...;base64,...)"
+        },
+        {
+            long: 'logocolor',
+            requireText: 'String',
+            desc: "logo color: hex (#ffffff or ffffff) or css color name. alias: logo-color"
+        },
     ],
     validates: [{
         type: 'Int',
@@ -44,7 +58,9 @@ notice: you must add a \`;\` at line end, or it will be ignored`
         '/{command}@{bot_name} left | right| green',
         '/{command}@{bot_name} -d girlfriend | not found | red',
         '/{command}@{bot_name} -p girlfriend | not found | blue',
-        '/{command}@{bot_name} escape | sequence \\\\\\|'
+        '/{command}@{bot_name} escape | sequence \\\\\\|',
+        '/{command}@{bot_name} --logo=javascript node | v20 | green',
+        '/{command}@{bot_name} --logo=javascript --logocolor=white node | v20 | green'
     ]
 };
 
@@ -136,7 +152,10 @@ module.exports = function(token, botInfo, message) {
         encodeURIComponent(color) +
         '.svg';
 
-    makeBadge(filename)
+    const svgUrl = buildBadgeUrl(filename, flags.logo || null, flags.logocolor || null);
+    const promise = flags.s ? fetchSvg(svgUrl) : makeBadge(svgUrl);
+
+    promise
     .then(function (file){
         var targetId = message.chat.id;
 
@@ -149,7 +168,9 @@ module.exports = function(token, botInfo, message) {
             additionOptions = {};
         }
 
-        if (flags.d) {
+        if (flags.s) {
+            sendDocument(token, file, 'badge.svg', 'image/svg+xml', targetId, additionOptions)
+        } else if (flags.d) {
             sendDocument(token, file, 'test.png', 'image/png', targetId, additionOptions)
         } else if (flags.p) {
             sendPhoto(token, file, 'test.png', 'image/png', targetId, additionOptions)
@@ -183,7 +204,7 @@ function sendDocument(token, document, fileName, MIME, chat_id, other_args) {
         }
     }
 
-    request.post({
+    request.post({ agentOptions: { family: 4 },
         url: 'https://api.telegram.org/bot' + token + '/sendDocument',
         formData: other_args
     }, function(err, response, body) {
@@ -205,7 +226,7 @@ function sendPhoto(token, photo, fileName, MIME, chat_id, other_args) {
         }
     }
 
-    request.post({
+    request.post({ agentOptions: { family: 4 },
         url: 'https://api.telegram.org/bot' + token + '/sendPhoto',
         formData: other_args
     }, function(err, response, body) {
@@ -227,7 +248,7 @@ function sendSticker(token, sticker, fileName, MIME, chat_id, other_args) {
         }
     }
 
-    request.post({
+    request.post({ agentOptions: { family: 4 },
         url: 'https://api.telegram.org/bot' + token + '/sendSticker',
         formData: other_args
     }, function(err, response, body) {
@@ -243,7 +264,7 @@ function printText(token, botInfo, chat_id, text, other_args) {
     other_args.chat_id = chat_id;
     other_args.text = text;
 
-    request.post({
+    request.post({ agentOptions: { family: 4 },
         url: 'https://api.telegram.org/bot' + token + '/sendMessage',
         formData: other_args
     }, function(err, response, body) {
@@ -260,7 +281,7 @@ function printUsages(token, botInfo, chat_id, other_args) {
     other_args.text = parser.usage('badge', botInfo.username, Info);
     other_args.disable_web_page_preview = 'true';
 
-    request.post({
+    request.post({ agentOptions: { family: 4 },
         url: 'https://api.telegram.org/bot' + token + '/sendMessage',
         formData: other_args
     }, function(err, response, body) {
@@ -270,41 +291,54 @@ function printUsages(token, botInfo, chat_id, other_args) {
     });
 }
 
-function makeBadge(filename) {
+function buildBadgeUrl(filename, logo, logoColor) {
+    let queryParams = '';
+    if (logo) {
+        queryParams += '?logo=' + encodeURIComponent(logo);
+        if (logoColor) {
+            let lc = logoColor.replace(/^\s+|\s+$/g, '');
+            if (/^#[a-f0-9]{3,8}$/i.test(lc)) {
+                lc = lc.slice(1);
+            } else if (cssColorNames[lc.toLowerCase()] != null) {
+                lc = cssColorNames[lc.toLowerCase()].slice(1);
+            }
+            queryParams += '&logoColor=' + encodeURIComponent(lc);
+        }
+    }
+    return 'https://img.shields.io/badge/' + filename + queryParams;
+}
+
+function fetchSvg(url) {
+    return new Promise((resolve, reject) => {
+        request.get({ url, encoding: null }, function(error, _response, body) {
+            console.log(url);
+            if (error) return reject(error);
+            resolve(body);
+        });
+    });
+}
+
+function makeBadge(url) {
     const WIDTH = 512;
     const HEIGHT = 120;
 
     const canvas = createCanvas(WIDTH, HEIGHT),
         ctx = canvas.getContext('2d');
-    
-    return new Promise((resolve, reject)=>{
-        request.get({
-            url: 'https://img.shields.io/badge/' + filename,
-            encoding: null
-        }, function(error, response, body) {
-            console.log(filename);
-    
-            loadImage(body)
-                .then(function(image) {
-                    const newHeight = 80;
-                    const newWidth = Math.min(newHeight / image.naturalHeight * image.naturalWidth, 480);
-                    image.height = newHeight;
-                    image.width = newWidth;
-    
-                    ctx.clearRect(0, 0, WIDTH, HEIGHT);
-                    ctx.drawImage(image, (WIDTH - newWidth) / 2, (HEIGHT - newHeight) / 2);
-    
-                    var file = canvas.toBuffer();
-    
-                    if (!file) {
-                        return reject(new Error('error during make image'));
-                    }
-                    
-                    resolve(file);
-                })
-                .catch(function(err) {
-                    reject(err);
-                })
+
+    console.log(url);
+    return fetchSvg(url)
+        .then(function(body) {
+            return loadImage(body);
         })
-    })
+        .then(function(image) {
+            const newHeight = 80;
+            const newWidth = Math.min(newHeight / image.naturalHeight * image.naturalWidth, 480);
+            image.height = newHeight;
+            image.width = newWidth;
+
+            ctx.clearRect(0, 0, WIDTH, HEIGHT);
+            ctx.drawImage(image, (WIDTH - newWidth) / 2, (HEIGHT - newHeight) / 2);
+
+            return canvas.toBuffer();
+        });
 }
