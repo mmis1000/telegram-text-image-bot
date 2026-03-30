@@ -1,6 +1,5 @@
 const cssColorNames = require("css-color-names");
-const { Canvas, loadImage } = require('canvas');
-const createCanvas = (width, height) => new Canvas(width, height);
+const { chromium } = require('playwright');
 const parser = require("../argumentParser.js")
 const request = require('request');
 
@@ -29,7 +28,7 @@ you could get this id by the /id command`
         {
             long: 'logo',
             requireText: 'String',
-            desc: "logo to display: SimpleIcons name (e.g. javascript) or base64 data URL (data:image/...;base64,...)"
+            desc: "logo to display: SimpleIcons name (e.g. javascript), emoji (e.g. 🚀), or base64 data URL (data:image/...;base64,...)"
         },
         {
             long: 'logocolor',
@@ -60,7 +59,9 @@ notice: you must add a \`;\` at line end, or it will be ignored`
         '/{command}@{bot_name} -p girlfriend | not found | blue',
         '/{command}@{bot_name} escape | sequence \\\\\\|',
         '/{command}@{bot_name} --logo=javascript node | v20 | green',
-        '/{command}@{bot_name} --logo=javascript --logocolor=white node | v20 | green'
+        '/{command}@{bot_name} --logo=javascript --logocolor=white node | v20 | green',
+        '/{command}@{bot_name} --logo=🚀 rocket | launch | blue',
+        '/{command}@{bot_name} --logo=✨ vibes | immaculate | ff69b4'
     ]
 };
 
@@ -152,11 +153,10 @@ module.exports = function(token, botInfo, message) {
         encodeURIComponent(color) +
         '.svg';
 
-    const svgUrl = buildBadgeUrl(filename, flags.logo || null, flags.logocolor || null);
-    const promise = flags.s ? fetchSvg(svgUrl) : makeBadge(svgUrl);
+    const promise = buildBadgeUrl(filename, flags.logo || null, flags.logocolor || null)
+        .then(svgUrl => flags.s ? fetchSvg(svgUrl) : makeBadge(svgUrl));
 
-    promise
-    .then(function (file){
+    promise.then(function (file){
         var targetId = message.chat.id;
 
         var additionOptions = {
@@ -291,10 +291,58 @@ function printUsages(token, botInfo, chat_id, other_args) {
     });
 }
 
-function buildBadgeUrl(filename, logo, logoColor) {
+function isEmoji(str) {
+    // If it's a plain ASCII slug (SimpleIcons name) or a data URL, it's not an emoji
+    return !/^[a-zA-Z0-9_-]+$/.test(str) && !str.startsWith('data:');
+}
+
+async function emojiToDataUrl(emoji) {
+    const path = require('path');
+    const fontPath = path.resolve(__dirname, '../NotoColorEmoji.ttf');
+    const browser = await chromium.launch();
+    try {
+        const page = await browser.newPage();
+        await page.setViewportSize({ width: 64, height: 64 });
+        await page.setContent(`<!DOCTYPE html>
+<html>
+<head>
+<style>
+@font-face {
+    font-family: 'NotoColorEmoji';
+    src: url('file://${fontPath}');
+}
+html, body {
+    margin: 0; padding: 0;
+    width: 64px; height: 64px;
+    overflow: hidden;
+    background: transparent;
+    display: flex; align-items: center; justify-content: center;
+}
+span {
+    font-family: 'NotoColorEmoji', sans-serif;
+    font-size: 56px;
+    line-height: 1;
+}
+</style>
+</head>
+<body><span id="e">${emoji}</span></body>
+</html>`);
+        await page.waitForFunction(() => document.fonts.ready).catch(() => {});
+        const buffer = await page.screenshot({ type: 'png', omitBackground: true });
+        return 'data:image/png;base64,' + buffer.toString('base64');
+    } finally {
+        await browser.close();
+    }
+}
+
+async function buildBadgeUrl(filename, logo, logoColor) {
     let queryParams = '';
     if (logo) {
-        queryParams += '?logo=' + encodeURIComponent(logo);
+        let logoValue = logo;
+        if (isEmoji(logo)) {
+            logoValue = await emojiToDataUrl(logo);
+        }
+        queryParams += '?logo=' + encodeURIComponent(logoValue);
         if (logoColor) {
             let lc = logoColor.replace(/^\s+|\s+$/g, '');
             if (/^#[a-f0-9]{3,8}$/i.test(lc)) {
@@ -318,27 +366,25 @@ function fetchSvg(url) {
     });
 }
 
-function makeBadge(url) {
-    const WIDTH = 512;
-    const HEIGHT = 120;
-
-    const canvas = createCanvas(WIDTH, HEIGHT),
-        ctx = canvas.getContext('2d');
-
+async function makeBadge(url) {
     console.log(url);
-    return fetchSvg(url)
-        .then(function(body) {
-            return loadImage(body);
-        })
-        .then(function(image) {
-            const newHeight = 80;
-            const newWidth = Math.min(newHeight / image.naturalHeight * image.naturalWidth, 480);
-            image.height = newHeight;
-            image.width = newWidth;
-
-            ctx.clearRect(0, 0, WIDTH, HEIGHT);
-            ctx.drawImage(image, (WIDTH - newWidth) / 2, (HEIGHT - newHeight) / 2);
-
-            return canvas.toBuffer();
-        });
+    const browser = await chromium.launch();
+    try {
+        const page = await browser.newPage();
+        await page.setViewportSize({ width: 512, height: 120 });
+        await page.setContent(`<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:transparent;display:flex;align-items:center;justify-content:center;width:512px;height:120px;">
+<img id="badge" src="${url}" style="height:80px;max-width:480px;">
+</body>
+</html>`);
+        await page.waitForFunction(() => {
+            const img = document.getElementById('badge');
+            return img && img.complete && img.naturalWidth > 0;
+        }, { timeout: 10000 }).catch(() => page.waitForTimeout(3000));
+        const buffer = await page.screenshot({ type: 'png', omitBackground: true });
+        return buffer;
+    } finally {
+        await browser.close();
+    }
 }

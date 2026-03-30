@@ -13,6 +13,7 @@
     "canvas": "^3.2.2",
     "css-color-names": "0.0.4",
     "express": "^4.17.1",
+    "playwright": "^1.58.2",
     "request": "^2.88.2",
     "runes2": "^0.4.16",
     "skia-canvas": "^3.0.8"
