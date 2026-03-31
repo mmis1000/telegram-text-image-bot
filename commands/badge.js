@@ -39,6 +39,21 @@ you could get this id by the /id command`
             requireText: 'String',
             desc: "logo color: hex (#ffffff or ffffff) or css color name. alias: logo-color"
         },
+        {
+            long: 'vpadding',
+            requireText: 'Int',
+            desc: "vertical padding in pixels (default: 20)"
+        },
+        {
+            long: 'hpadding',
+            requireText: 'Int',
+            desc: "horizontal padding in pixels (default: 16)"
+        },
+        {
+            long: 'align',
+            requireText: 'String',
+            desc: "badge alignment: left, center (default), right, stretch (fills width, keeps aspect ratio)"
+        },
     ],
     validates: [{
         type: 'Int',
@@ -65,7 +80,11 @@ notice: you must add a \`;\` at line end, or it will be ignored`
         '/{command}@{bot_name} --logo=javascript node | v20 | green',
         '/{command}@{bot_name} --logo=javascript --logocolor=white node | v20 | green',
         '/{command}@{bot_name} --logo=🚀 rocket | launch | blue',
-        '/{command}@{bot_name} --logo=✨ vibes | immaculate | ff69b4'
+        '/{command}@{bot_name} --logo=✨ vibes | immaculate | ff69b4',
+        '/{command}@{bot_name} --vpadding=40 --hpadding=32 hello | world | blue',
+        '/{command}@{bot_name} --align=left build | passing | brightgreen',
+        '/{command}@{bot_name} --align=right version | 1.0.0 | blue',
+        '/{command}@{bot_name} --align=stretch coverage | 100% | brightgreen'
     ]
 };
 
@@ -98,6 +117,16 @@ module.exports = function(token, botInfo, message) {
             err.message + `\nUse /badge@${botInfo.username} to see more detail`, { reply_to_message_id: message.message_id }
         );
 
+        return true;
+    }
+
+    if (flags.align != null && !['left', 'center', 'right', 'stretch'].includes(flags.align)) {
+        printText(
+            token,
+            botInfo,
+            message.chat.id,
+            `Invalid align value: "${flags.align}". Must be left, center, right, or stretch\nUse /badge@${botInfo.username} to see more detail`, { reply_to_message_id: message.message_id }
+        );
         return true;
     }
 
@@ -162,7 +191,11 @@ module.exports = function(token, botInfo, message) {
     const promise = buildBadgeUrl(filename, flags.logo || null, flags.logocolor || null)
         .then(svgUrl => {
             if (flags.u) return svgUrl;
-            return flags.s ? fetchSvg(svgUrl) : makeBadge(svgUrl);
+            return flags.s ? fetchSvg(svgUrl) : makeBadge(svgUrl, {
+                vpadding: flags.vpadding,
+                hpadding: flags.hpadding,
+                align: flags.align,
+            });
         });
 
     promise.then(function (file){
@@ -377,22 +410,70 @@ function fetchSvg(url) {
     });
 }
 
-async function makeBadge(url) {
+async function makeBadge(url, options = {}) {
+    const vpadding = options.vpadding !== undefined ? parseInt(options.vpadding) : 20;
+    const hpadding = options.hpadding !== undefined ? parseInt(options.hpadding) : 16;
+    const align = options.align || 'center';
+
+    const viewportWidth = 512;
+    const contentWidth = viewportWidth - 2 * hpadding;
+
     console.log(url);
     const browser = await chromium.launch();
     try {
         const page = await browser.newPage();
-        await page.setViewportSize({ width: 512, height: 120 });
-        await page.setContent(`<!DOCTYPE html>
+
+        if (align === 'stretch') {
+            // Load at a temp size to get natural dimensions
+            await page.setViewportSize({ width: viewportWidth, height: 200 });
+            await page.setContent(`<!DOCTYPE html>
 <html>
-<body style="margin:0;padding:0;background:transparent;display:flex;align-items:center;justify-content:center;width:512px;height:120px;">
-<img id="badge" src="${url}" style="height:80px;max-width:480px;">
+<body style="margin:0;padding:0;background:transparent;">
+<img id="badge" src="${url}" style="width:${contentWidth}px;">
 </body>
 </html>`);
-        await page.waitForFunction(() => {
-            const img = document.getElementById('badge');
-            return img && img.complete && img.naturalWidth > 0;
-        }, { timeout: 10000 }).catch(() => page.waitForTimeout(3000));
+            await page.waitForFunction(() => {
+                const img = document.getElementById('badge');
+                return img && img.complete && img.naturalWidth > 0;
+            }, { timeout: 10000 }).catch(() => page.waitForTimeout(3000));
+
+            const dims = await page.evaluate(() => {
+                const img = document.getElementById('badge');
+                return { naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight };
+            });
+
+            const displayHeight = Math.round(contentWidth * dims.naturalHeight / dims.naturalWidth);
+            const viewportHeight = displayHeight + 2 * vpadding;
+
+            await page.setViewportSize({ width: viewportWidth, height: viewportHeight });
+            await page.setContent(`<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:${vpadding}px ${hpadding}px;background:transparent;box-sizing:border-box;width:${viewportWidth}px;">
+<img id="badge" src="${url}" style="width:${contentWidth}px;height:${displayHeight}px;display:block;">
+</body>
+</html>`);
+            await page.waitForFunction(() => {
+                const img = document.getElementById('badge');
+                return img && img.complete && img.naturalWidth > 0;
+            }, { timeout: 10000 }).catch(() => page.waitForTimeout(3000));
+        } else {
+            const justifyContent = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
+            const badgeHeight = 80;
+            const viewportHeight = badgeHeight + 2 * vpadding;
+
+            await page.setViewportSize({ width: viewportWidth, height: viewportHeight });
+            await page.setContent(`<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0 ${hpadding}px;background:transparent;display:flex;align-items:center;justify-content:${justifyContent};width:${viewportWidth}px;height:${viewportHeight}px;box-sizing:border-box;">
+<img id="badge" src="${url}" style="height:${badgeHeight}px;max-width:${contentWidth}px;">
+</body>
+</html>`);
+            await page.waitForFunction(() => {
+                const img = document.getElementById('badge');
+                return img && img.complete && img.naturalWidth > 0;
+            }, { timeout: 10000 }).catch(() => page.waitForTimeout(3000));
+        }
+
         const buffer = await page.screenshot({ type: 'png', omitBackground: true });
         return buffer;
     } finally {
